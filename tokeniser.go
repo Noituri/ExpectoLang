@@ -1,55 +1,73 @@
 package main
 
 import (
+	"errors"
 	"strconv"
 	"unicode"
 )
 
 const (
-	tok_eof = iota
-	tok_function
-	tok_identifier
-	tok_extern
-	tok_float
+	TokEOF = iota
+	TokFunction
+	TokIdentifier
+	TokExtern
+	TokFloat
 )
 
 var (
 	Identifier  string
 	floatVal    float64
-	currectChar = 0
+	currentChar = -1
 )
+
+func nextChar(source string, char *uint8) error {
+	if currentChar+ 1 < len(source) {
+		currentChar++
+		*char = source[currentChar]
+		return nil
+	}
+
+	return errors.New("eof")
+}
 
 func GetToken(source string) uint8 {
 	var lastChar uint8 = 32
 
 	// is space
 	for lastChar == 32 {
-		lastChar = source[currectChar]
-		currectChar++
+		if nextChar(source, &lastChar) != nil {
+			currentChar = -1
+			return TokEOF
+		}
 	}
 
 	// is alphabetic
 	if unicode.IsLetter(rune(lastChar)) {
 		Identifier = string(rune(lastChar))
 
-		currectChar++
-		lastChar = source[currectChar]
+		if nextChar(source, &lastChar) != nil {
+			currentChar = -1
+			return TokEOF
+		}
+
 		for unicode.IsLetter(rune(lastChar)) {
 			Identifier += string(rune(lastChar))
-
-			currectChar++
-			lastChar = source[currectChar]
+			if nextChar(source, &lastChar) != nil {
+				break
+			}
 		}
+
+		currentChar = -1
 
 		if Identifier == "fun" {
-			return tok_function
+			return TokFunction
 		}
 
-		if Identifier == "@" {
-			return tok_extern
+		if Identifier == "extern" {
+			return TokExtern
 		}
 
-		return tok_identifier
+		return TokIdentifier
 	}
 
 	// is digit or dot
@@ -59,38 +77,44 @@ func GetToken(source string) uint8 {
 		//TODO check if there is second dot in number
 		for ;; {
 			tempStr += string(rune(lastChar))
-			currectChar++
-			lastChar = source[currectChar]
 
-			if !unicode.IsNumber(rune(lastChar)) && lastChar != 46 {
+			if !unicode.IsNumber(rune(lastChar)) && lastChar != 46 || nextChar(source, &lastChar) != nil {
 				break
 			}
 		}
 
 		floatVal, _ = strconv.ParseFloat(tempStr, 64)
-		return tok_float
+		currentChar = -1
+		return TokFloat
 	}
+
+	eof := false
 
 	// Check for comments (# for now)
 	if lastChar == 35 {
+
 		for ;; {
-			currectChar++
-			lastChar = source[currectChar]
+			if nextChar(source, &lastChar) != nil {
+				eof = true
+				break
+			}
 
 			if lastChar == 13 || lastChar == 10 {
 				break
 			}
+		}
 
+		if !eof {
 			return GetToken(source)
 		}
 	}
 
-
-	//TODO CHECK FOR EOF
-
 	tempChar := lastChar
-	currectChar++
-	lastChar = source[currectChar]
+
+	if nextChar(source, &lastChar) != nil || eof {
+		currentChar = -1
+		return TokEOF
+	}
 
 	return tempChar
 }

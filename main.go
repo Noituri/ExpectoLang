@@ -35,5 +35,8 @@ func main() {
 		}
 
 		line = strings.TrimSpace(line)
+		res := GetToken(line)
+
+		println(res == TokFunction, res)
 	}
 }
