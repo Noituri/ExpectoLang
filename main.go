@@ -81,10 +81,18 @@ func main() {
 			fun, err := ParseFunction()
 
 			if err != nil {
-				println(err.Error())
+				println("Error: ", err.Error())
 				return
 			}
 
+			println("name: ", fun.Proto.Name, " args: ", fun.Proto.Args[0])
+		}
+		default: {
+			fun, err := ParseTopLevelExpr()
+			if err != nil {
+				println("Error top: ", err.Error())
+				return
+			}
 			println("name: ", fun.Proto.Name, " args: ", fun.Proto.Args[0])
 		}
 		}
