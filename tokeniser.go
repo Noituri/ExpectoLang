@@ -15,28 +15,34 @@ const (
 )
 
 var (
-	Identifier  string
-	floatVal    float64
-	currentChar = -1
+	Source       string
+	CurrentToken uint8
+	Identifier   string
+	floatVal     float64
+	CurrentChar  = -1
 )
 
+func GetNextToken() {
+	CurrentToken = GetToken(Source)
+}
+
 func nextChar(source string, char *uint8) error {
-	if currentChar+ 1 < len(source) {
-		currentChar++
-		*char = source[currentChar]
+	if CurrentChar + 1 < len(source) {
+		CurrentChar++
+		*char = source[CurrentChar]
 		return nil
 	}
 
 	return errors.New("eof")
 }
 
-func GetToken(source string) uint8 {
-	var lastChar uint8 = 32
+var lastChar uint8 = 32
 
+func GetToken(source string) uint8 {
 	// is space
 	for lastChar == 32 {
 		if nextChar(source, &lastChar) != nil {
-			currentChar = -1
+			CurrentChar = -1
 			return TokEOF
 		}
 	}
@@ -46,18 +52,17 @@ func GetToken(source string) uint8 {
 		Identifier = string(rune(lastChar))
 
 		if nextChar(source, &lastChar) != nil {
-			currentChar = -1
+			CurrentChar = -1
 			return TokEOF
 		}
 
 		for unicode.IsLetter(rune(lastChar)) {
 			Identifier += string(rune(lastChar))
+
 			if nextChar(source, &lastChar) != nil {
 				break
 			}
 		}
-
-		currentChar = -1
 
 		if Identifier == "fun" {
 			return TokFunction
@@ -84,7 +89,6 @@ func GetToken(source string) uint8 {
 		}
 
 		floatVal, _ = strconv.ParseFloat(tempStr, 64)
-		currentChar = -1
 		return TokFloat
 	}
 
@@ -112,8 +116,7 @@ func GetToken(source string) uint8 {
 	tempChar := lastChar
 
 	if nextChar(source, &lastChar) != nil || eof {
-		currentChar = -1
-		return TokEOF
+		CurrentChar = -1
 	}
 
 	return tempChar
