@@ -87,3 +87,13 @@ fun add(a, b) 2 + 2 * (2 - 4)
 fun add(a b) 2 + 2 * (2 - 4)
 fun add(ab) 2 + 2 * (2 - 4)
 fun add(ab) 2 + 2 * 2 - 4
+fun add() 2+2
+fun add() 2 + 2
+fun add(a) 2 + 2
+fun add(a) 2 + 2 owo(2) end
+fun add(a) owo(2) end
+fun add(a) () end
+fun add(a) (a + 2) * 3 end
+add(a)
+fun add(a) (a + 2) * 3 end
+fun add(a) (a + 2) * 3 add(2) end
