@@ -1,5 +1,14 @@
 package main
 
+const (
+	astProcedure kind = iota
+	astBinary
+	astNumber
+	astCall
+	astBlock
+	astPrototype
+)
+
 type AST interface {
 	Position() position
 	Kind() kind

@@ -106,7 +106,7 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 
 	return PrototypeAST{
 		position(pos),
-		kind(TokProcedure),
+		astPrototype,
 		funcName,
 		argsNames,
 		returnType,
@@ -138,12 +138,12 @@ func (p *Parser) ParseProcedure() (ProcedureAST, error) {
 
 	block := BlockAST{
 		position(pos),
-		kind(TokProcedure),
+		astBlock,
 		body,
 	}
 	return ProcedureAST{
 		position(pos),
-		kind(TokProcedure),
+		astProcedure,
 		proto,
 		block,
 	}, nil
@@ -165,7 +165,7 @@ func (p *Parser) ParseTopLevelExpr() (ProcedureAST, error) {
 
 	proto := PrototypeAST{
 		position(pos),
-		kind(TokProcedure),
+		astPrototype,
 		"",
 		nil,
 		LitVoid,
@@ -174,13 +174,13 @@ func (p *Parser) ParseTopLevelExpr() (ProcedureAST, error) {
 
 	block := BlockAST{
 		position(pos),
-		kind(TokProcedure),
+		astBlock,
 		[]AST{expr},
 	}
 
 	return ProcedureAST{
 		position(pos),
-		kind(TokProcedure),
+		astProcedure,
 		proto,
 		block,
 	}, nil
@@ -233,7 +233,7 @@ func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 
 		return BinaryAST{
 			position(pos),
-			kind(-1),
+			astBinary,
 			rune(binop),
 			lhs,
 			rhs,
@@ -282,7 +282,7 @@ func (p *Parser) parseIdentifier() AST {
 	p.lexer.NextToken()
 
 	if p.lexer.CurrentToken.kind != TokLParen {
-		return NumberLiteralAST{position(pos), TokNumber, p.lexer.numVal}
+		return NumberLiteralAST{position(pos), astNumber, p.lexer.numVal}
 	}
 
 	p.lexer.NextToken()
@@ -311,7 +311,7 @@ func (p *Parser) parseIdentifier() AST {
 
 	p.lexer.NextToken()
 
-	return CallAST{position(pos), TokProcedure, name, args}
+	return CallAST{position(pos), astCall, name, args}
 }
 
 func (p *Parser) parseNumber() AST {
@@ -319,5 +319,5 @@ func (p *Parser) parseNumber() AST {
 	val := p.lexer.numVal
 
 	p.lexer.NextToken()
-	return &NumberLiteralAST{position(pos), TokNumber, val}
+	return &NumberLiteralAST{position(pos), astNumber, val}
 }
