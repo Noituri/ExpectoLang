@@ -7,16 +7,16 @@ import (
 )
 
 const (
-	TokEOF = iota
-	TokProcedure
-	TokEnd
+	TokEOF = iota // End of string/file
+	TokProcedure // pr (procedure) aka function
+	TokEnd // end of statements etc
 	TokIdentifier
-	TokReturn
-	TokExtern
-	TokNumber
-	TokLParen
-	TokRParen
-	TokUnknown
+	TokReturn // procedure return
+	TokExtern // extern procedure
+	TokNumber // number
+	TokLParen // (
+	TokRParen // )
+	TokUnknown // Not specified type
 )
 
 type tokenType uint8
@@ -81,14 +81,14 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 			return true
 		}
 
-		if l.Identifier == "end" {
-			l.CurrentToken.kind = TokEnd
+		if l.Identifier == "extern" {
+			l.CurrentToken.kind = TokExtern
 			l.CurrentToken.val = -1
 			return true
 		}
 
-		if l.Identifier == "extern" {
-			l.CurrentToken.kind = TokExtern
+		if l.Identifier == "end" {
+			l.CurrentToken.kind = TokEnd
 			l.CurrentToken.val = -1
 			return true
 		}
@@ -99,9 +99,8 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 			return true
 		}
 
-		println(l.CurrentToken.val, "o1", l.Identifier)
 		l.CurrentToken.kind = TokIdentifier
-		l.CurrentToken.val = int(l.LastChar)
+		l.CurrentToken.val = -1
 		return true
 	}
 	return false
@@ -149,6 +148,7 @@ func (l *Lexer) isComment() (stopLexing bool) {
 		}
 
 		l.NextToken()
+		return true
 	}
 	return false
 }
@@ -158,9 +158,8 @@ func (l *Lexer) isParen() (stopLexing bool) {
 		if l.nextChar() != nil {
 			l.CurrentToken.kind = TokEOF
 			l.CurrentToken.val = -1
-			return true
+			return
 		}
-
 		l.CurrentToken.kind = TokLParen
 		l.CurrentToken.val = -1
 		return true
@@ -170,9 +169,8 @@ func (l *Lexer) isParen() (stopLexing bool) {
 		if l.nextChar() != nil {
 			l.CurrentToken.kind = TokEOF
 			l.CurrentToken.val = -1
-			return true
+			return
 		}
-
 		l.CurrentToken.kind = TokRParen
 		l.CurrentToken.val = -1
 		return true
@@ -200,16 +198,11 @@ func (l *Lexer) NextToken() {
 
 	if l.isParen() {
 		return
-
 	}
 
 	tempChar := l.LastChar
 
-	if l.nextChar() != nil {
-		l.CurrentToken.kind = TokEOF
-		l.CurrentToken.val = -1
-		return
-	}
+	if l.nextChar() != nil {}
 
 	l.CurrentToken.kind = TokUnknown
 	l.CurrentToken.val = int(tempChar)

@@ -42,11 +42,16 @@ type BlockAST struct {
 	body []AST
 }
 
+type ArgsPrototype struct {
+	Name string
+	ArgType string
+}
+
 type PrototypeAST struct {
 	position
 	kind
 	Name 	   string
-	Args 	   []string
+	Args 	   []ArgsPrototype
 	ReturnType string
 }
 

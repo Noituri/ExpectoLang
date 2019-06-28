@@ -10,7 +10,20 @@ type Parser struct {
 	binOpPrecedence map[string] int
 }
 
-func (p *Parser) ParsePrototype() (PrototypeAST, error) {
+func (p *Parser) getType(t string) string {
+	switch t {
+	case LitVoid:
+		panic("NOT IMPLEMENTED")
+	case LitFloat:
+		return LitFloat
+	case LitString:
+		panic("NOT IMPLEMENTED")
+	default:
+		panic(fmt.Sprintf("type-%s-does-no-exit", t))
+	}
+}
+
+func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 	pos := p.lexer.CurrentChar
 
 	if p.lexer.CurrentToken.kind != TokIdentifier {
@@ -24,18 +37,51 @@ func (p *Parser) ParsePrototype() (PrototypeAST, error) {
 		return PrototypeAST{}, errors.New("(-expected")
 	}
 
-	argsNames := []string{}
+	argsNames := []ArgsPrototype{}
 
 	p.lexer.NextToken()
 	for ;; {
 		if p.lexer.CurrentToken.kind == TokIdentifier {
-			argsNames = append(argsNames, p.lexer.Identifier)
+			name := p.lexer.Identifier
+			if callee {
+				argsNames = append(argsNames, ArgsPrototype{
+					Name: 	 name,
+					ArgType: "unknown",
+				})
+			} else {
+				p.lexer.NextToken()
+
+				if p.lexer.CurrentToken.val != ':' {
+					return PrototypeAST{}, errors.New("wrong-args-definition")
+				}
+
+				p.lexer.NextToken()
+
+
+				argsNames = append(argsNames, ArgsPrototype{
+					Name: 	 name,
+					ArgType: p.getType(p.lexer.Identifier),
+				})
+			}
+		} else if p.lexer.CurrentToken.kind == TokRParen {
+			if len(argsNames) == 0 {
+				break
+			} else {
+				return PrototypeAST{}, errors.New("wrong-args-definition")
+			}
+		} else {
+			return PrototypeAST{}, errors.New("wrong-args-definition")
 		}
 
 		p.lexer.NextToken()
-		if p.lexer.CurrentToken.val != ',' && p.lexer.CurrentToken.kind != TokIdentifier {
+		if p.lexer.CurrentToken.val != ',' {
+			if p.lexer.CurrentToken.kind != TokRParen {
+				return PrototypeAST{}, errors.New("wrong-args-definition")
+			}
+
 			break
 		}
+		p.lexer.NextToken()
 	}
 
 	if p.lexer.CurrentToken.kind != TokRParen {
@@ -44,7 +90,7 @@ func (p *Parser) ParsePrototype() (PrototypeAST, error) {
 
 	p.lexer.NextToken()
 
-	returnType := LIT_VOID
+	returnType := LitVoid
 
 	if p.lexer.CurrentToken.val == ':' {
 		p.lexer.NextToken()
@@ -53,16 +99,9 @@ func (p *Parser) ParsePrototype() (PrototypeAST, error) {
 			return PrototypeAST{}, errors.New("return-type")
 		}
 
-		switch p.lexer.Identifier {
-		case LIT_VOID:
-			panic("NOT IMPLEMENTED")
-		case LIT_FLOAT:
-			returnType = LIT_FLOAT
-		case LIT_STRING:
-			panic("NOT IMPLEMENTED")
-		default:
-			return PrototypeAST{}, errors.New(fmt.Sprintf("type-%s-does-no-exit", p.lexer.Identifier))
-		}
+		returnType = p.getType(p.lexer.Identifier)
+
+		p.lexer.NextToken()
 	}
 
 	return PrototypeAST{
@@ -74,9 +113,45 @@ func (p *Parser) ParsePrototype() (PrototypeAST, error) {
 	}, nil
 }
 
+func (p *Parser) ParseProcedure() (ProcedureAST, error) {
+	pos := p.lexer.CurrentChar
+	p.lexer.NextToken()
+	proto, err := p.ParsePrototype(false)
+
+	if err != nil {
+		return ProcedureAST{}, err
+	}
+
+	body := []AST{}
+
+	for ;p.lexer.CurrentToken.kind != TokEnd; {
+		if p.lexer.CurrentToken.kind == TokEOF {
+			return ProcedureAST{}, errors.New("no-end")
+		}
+
+		expr := p.ParseExpression()
+
+		if expr != nil {
+			body = append(body, expr)
+		}
+	}
+
+	block := BlockAST{
+		position(pos),
+		kind(TokProcedure),
+		body,
+	}
+	return ProcedureAST{
+		position(pos),
+		kind(TokProcedure),
+		proto,
+		block,
+	}, nil
+}
+
 func (p *Parser) ParseExtern() (PrototypeAST, error) {
 	p.lexer.NextToken()
-	return p.ParsePrototype()
+	return p.ParsePrototype(true)
 }
 
 func (p *Parser) ParseTopLevelExpr() (ProcedureAST, error) {
@@ -93,7 +168,7 @@ func (p *Parser) ParseTopLevelExpr() (ProcedureAST, error) {
 		kind(TokProcedure),
 		"",
 		nil,
-		LIT_VOID,
+		LitVoid,
 	}
 
 
@@ -103,41 +178,6 @@ func (p *Parser) ParseTopLevelExpr() (ProcedureAST, error) {
 		[]AST{expr},
 	}
 
-	return ProcedureAST{
-		position(pos),
-		kind(TokProcedure),
-		proto,
-		block,
-	}, nil
-}
-
-func (p *Parser) ParseProcedure() (ProcedureAST, error) {
-	pos := p.lexer.CurrentChar
-	p.lexer.NextToken()
-	proto, err := p.ParsePrototype()
-
-	if err != nil {
-		return ProcedureAST{}, err
-	}
-
-	body := []AST{}
-	for ;; {
-		expr := p.ParseExpression()
-		if expr == nil {
-			return ProcedureAST{}, errors.New("no-expression")
-		}
-
-		body = append(body, expr)
-		if p.lexer.CurrentToken.kind == TokEnd {
-			break
-		}
-	}
-
-	block := BlockAST{
-		position(pos),
-		kind(TokProcedure),
-		body,
-	}
 	return ProcedureAST{
 		position(pos),
 		kind(TokProcedure),
@@ -209,10 +249,11 @@ func (p *Parser) ParsePrimary() AST {
 		return p.parseNumber()
 	case TokLParen:
 		return p.parseParen()
+	case TokProcedure:
+		panic("Syntax Error: Cannot define function here")
 	case TokEnd:
-		panic("Syntax Error: End")
+		panic("Syntax Error: Extra end")
 	default:
-		println("owo", p.lexer.CurrentToken.val)
 		p.lexer.NextToken()
 		return nil
 	}
