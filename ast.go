@@ -1,5 +1,9 @@
 package main
 
+import (
+	"github.com/llir/ll/ast"
+)
+
 const (
 	astProcedure kind = iota
 	astBinary
@@ -12,6 +16,7 @@ const (
 type AST interface {
 	Position() position
 	Kind() kind
+	codegen() ast.Value
 }
 
 type position int
