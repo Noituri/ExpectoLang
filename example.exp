@@ -1,5 +1,9 @@
-pr add(a:float, v: float): float
+pr add(a:float, v: float)
     2 + 2
 end
 
+extern sin()
 add(2,3)
+sin()
+
+add(3,2)

@@ -36,6 +36,7 @@ func handleExtern(parser *Parser) {
 }
 
 func handleTopLevelExpression(parser *Parser) {
+	//println(parser.lexer.CurrentToken.kind, parser.lexer.CurrentChar)
 	topAST, err := parser.ParseTopLevelExpr()
 
 	if err != nil {
@@ -53,7 +54,7 @@ func handleTopLevelExpression(parser *Parser) {
 
 
 func handle(parser Parser) {
-	parser.lexer.NextToken()
+	println(parser.lexer.CurrentToken.kind, parser.lexer.CurrentChar)
 
 	switch parser.lexer.CurrentToken.kind {
 	case TokEOF:
@@ -110,6 +111,7 @@ func main() {
 		},
 	}
 
+	parser.lexer.NextToken()
 	handle(parser)
 	module.Dump()
 }

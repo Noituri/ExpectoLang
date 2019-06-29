@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	TokEOF       = iota // End of string/file
+	TokEOF = iota // End of string/file
 	TokProcedure        // pr (procedure) aka function
 	TokEnd              // end of statements etc
 	TokIdentifier

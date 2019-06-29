@@ -101,9 +101,10 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 		}
 
 		returnType = p.getType(p.lexer.Identifier)
-
 		p.lexer.NextToken()
 	}
+
+	println("OVERHERE", p.lexer.CurrentToken.kind, p.lexer.CurrentChar)
 
 	return PrototypeAST{
 		position(pos),
@@ -136,6 +137,8 @@ func (p *Parser) ParseProcedure() (ProcedureAST, error) {
 			body = append(body, expr)
 		}
 	}
+
+	p.lexer.NextToken()
 
 	block := BlockAST{
 		position(pos),
@@ -288,6 +291,7 @@ func (p *Parser) parseIdentifier() AST {
 	}
 
 	p.lexer.NextToken()
+
 
 	args := []AST{}
 
