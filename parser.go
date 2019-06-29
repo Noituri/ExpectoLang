@@ -6,8 +6,8 @@ import (
 )
 
 type Parser struct {
-	lexer 			Lexer
-	binOpPrecedence map[string] int
+	lexer           Lexer
+	binOpPrecedence map[string]int
 }
 
 func (p *Parser) getType(t string) string {
@@ -40,12 +40,12 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 	argsNames := []ArgsPrototype{}
 
 	p.lexer.NextToken()
-	for ;; {
+	for ; ; {
 		if p.lexer.CurrentToken.kind == TokIdentifier {
 			name := p.lexer.Identifier
 			if callee {
 				argsNames = append(argsNames, ArgsPrototype{
-					Name: 	 name,
+					Name:    name,
 					ArgType: "unknown",
 				})
 			} else {
@@ -57,9 +57,8 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 
 				p.lexer.NextToken()
 
-
 				argsNames = append(argsNames, ArgsPrototype{
-					Name: 	 name,
+					Name:    name,
 					ArgType: p.getType(p.lexer.Identifier),
 				})
 			}
@@ -70,7 +69,9 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 				return PrototypeAST{}, errors.New("wrong-args-definition")
 			}
 		} else {
-			return PrototypeAST{}, errors.New("wrong-args-definition")
+			if !callee {
+				return PrototypeAST{}, errors.New("wrong-args-definition")
+			}
 		}
 
 		p.lexer.NextToken()
@@ -124,7 +125,7 @@ func (p *Parser) ParseProcedure() (ProcedureAST, error) {
 
 	body := []AST{}
 
-	for ;p.lexer.CurrentToken.kind != TokEnd; {
+	for ; p.lexer.CurrentToken.kind != TokEnd; {
 		if p.lexer.CurrentToken.kind == TokEOF {
 			return ProcedureAST{}, errors.New("no-end")
 		}
@@ -158,7 +159,6 @@ func (p *Parser) ParseTopLevelExpr() (ProcedureAST, error) {
 	pos := p.lexer.CurrentChar
 
 	expr := p.ParseExpression()
-
 	if expr == nil {
 		return ProcedureAST{}, errors.New("no-expression")
 	}
@@ -170,7 +170,6 @@ func (p *Parser) ParseTopLevelExpr() (ProcedureAST, error) {
 		nil,
 		LitVoid,
 	}
-
 
 	block := BlockAST{
 		position(pos),
@@ -190,6 +189,7 @@ func (p *Parser) ParseExpression() AST {
 	lhs := p.ParsePrimary()
 
 	if lhs == nil {
+
 		return nil
 	}
 
@@ -198,7 +198,7 @@ func (p *Parser) ParseExpression() AST {
 
 func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 	pos := p.lexer.CurrentChar
-	for ;; {
+	for ; ; {
 		tokenPrec, ok := p.binOpPrecedence[string(rune(p.lexer.CurrentToken.val))]
 
 		if !ok {
@@ -225,7 +225,7 @@ func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 		}
 
 		if tokenPrec < nextPrec {
-			rhs = p.ParseBinOpRHS(tokenPrec + 1, rhs)
+			rhs = p.ParseBinOpRHS(tokenPrec+1, rhs)
 			if rhs == nil {
 				return nil
 			}
@@ -255,6 +255,8 @@ func (p *Parser) ParsePrimary() AST {
 		panic("Syntax Error: Extra end")
 	default:
 		p.lexer.NextToken()
+		println("RHS", string(rune(p.lexer.CurrentToken.val)), p.lexer.Identifier, p.lexer.CurrentToken.kind, p.lexer.CurrentChar)
+
 		return nil
 	}
 }
@@ -289,28 +291,26 @@ func (p *Parser) parseIdentifier() AST {
 
 	args := []AST{}
 
-		for ;p.lexer.CurrentToken.kind != TokRParen; {
-			arg := p.ParseExpression()
-			if arg == nil {
-				return nil
-			}
-
-			args = append(args, arg)
-
-			if p.lexer.CurrentToken.kind == TokRParen {
-				break
-			}
-
-			if p.lexer.CurrentToken.val != ',' {
-				return nil
-			}
-
-			p.lexer.NextToken()
+	for ; p.lexer.CurrentToken.kind != TokRParen; {
+		arg := p.ParseExpression()
+		if arg == nil {
+			return nil
 		}
 
+		args = append(args, arg)
+
+		if p.lexer.CurrentToken.kind == TokRParen {
+			break
+		}
+
+		if p.lexer.CurrentToken.val != ',' {
+			return nil
+		}
+
+		p.lexer.NextToken()
+	}
 
 	p.lexer.NextToken()
-
 	return &CallAST{position(pos), astCall, name, args}
 }
 

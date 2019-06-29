@@ -7,16 +7,16 @@ import (
 )
 
 const (
-	TokEOF = iota // End of string/file
-	TokProcedure // pr (procedure) aka function
-	TokEnd // end of statements etc
+	TokEOF       = iota // End of string/file
+	TokProcedure        // pr (procedure) aka function
+	TokEnd              // end of statements etc
 	TokIdentifier
-	TokReturn // procedure return
-	TokExtern // extern procedure
-	TokNumber // number
-	TokLParen // (
-	TokRParen // )
-	TokUnknown // Not specified type
+	TokReturn   // procedure return
+	TokExtern   // extern procedure
+	TokNumber   // number
+	TokLParen   // (
+	TokRParen   // )
+	TokUnknown  // Not specified type
 )
 
 type tokenType uint8
@@ -30,13 +30,14 @@ type Lexer struct {
 	Source       string
 	CurrentToken Token
 	Identifier   string
-	numVal     float64
+	numVal       float64
 	CurrentChar  int
-	LastChar	 uint8
+	LastChar     uint8
+	isEOF        bool
 }
 
 func (l *Lexer) nextChar() error {
-	if l.CurrentChar + 1 < len(l.Source) {
+	if l.CurrentChar+1 < len(l.Source) {
 		l.CurrentChar++
 		l.LastChar = l.Source[l.CurrentChar]
 		return nil
@@ -111,7 +112,7 @@ func (l *Lexer) isDigit() (stopLexing bool) {
 		tempStr := ""
 
 		//TODO check if there is second dot in number
-		for ;; {
+		for ; ; {
 			tempStr += string(rune(l.LastChar))
 			if l.nextChar() != nil {
 				l.CurrentToken.kind = TokEOF
@@ -135,7 +136,7 @@ func (l *Lexer) isDigit() (stopLexing bool) {
 
 func (l *Lexer) isComment() (stopLexing bool) {
 	if l.LastChar == '#' {
-		for ;; {
+		for ; ; {
 			if l.nextChar() != nil {
 				l.CurrentToken.kind = TokEOF
 				l.CurrentToken.val = -1
@@ -155,22 +156,16 @@ func (l *Lexer) isComment() (stopLexing bool) {
 
 func (l *Lexer) isParen() (stopLexing bool) {
 	if l.LastChar == '(' {
-		if l.nextChar() != nil {
-			l.CurrentToken.kind = TokEOF
-			l.CurrentToken.val = -1
-			return
-		}
+		l.isEOF = l.nextChar() != nil
+
 		l.CurrentToken.kind = TokLParen
 		l.CurrentToken.val = -1
 		return true
 	}
 
 	if l.LastChar == ')' {
-		if l.nextChar() != nil {
-			l.CurrentToken.kind = TokEOF
-			l.CurrentToken.val = -1
-			return
-		}
+		l.isEOF = l.nextChar() != nil
+
 		l.CurrentToken.kind = TokRParen
 		l.CurrentToken.val = -1
 		return true
@@ -180,6 +175,12 @@ func (l *Lexer) isParen() (stopLexing bool) {
 }
 
 func (l *Lexer) NextToken() {
+	if l.isEOF {
+		l.CurrentToken.kind = TokEOF
+		l.CurrentToken.val = -1
+		return
+	}
+
 	if l.removeSpace() {
 		return
 	}
@@ -202,7 +203,8 @@ func (l *Lexer) NextToken() {
 
 	tempChar := l.LastChar
 
-	if l.nextChar() != nil {}
+	if l.nextChar() != nil {
+	}
 
 	l.CurrentToken.kind = TokUnknown
 	l.CurrentToken.val = int(tempChar)

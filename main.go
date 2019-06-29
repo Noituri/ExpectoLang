@@ -4,74 +4,51 @@ import (
 	"io/ioutil"
 )
 
-/*
-static void HandleTopLevelExpression() {
-  // Evaluate a top-level expression into an anonymous function.
-  if (auto FnAST = ParseTopLevelExpr()) {
-    if (auto *FnIR = FnAST->codegen()) {
-      fprintf(stderr, "Read top-level expression:");
-      FnIR->print(errs());
-      fprintf(stderr, "\n");
-    }
-  } else {
-    // Skip token for error recovery.
-    getNextToken();
-  }
-}
- */
-
 func handleProcedure(parser *Parser) {
 	procAST, err := parser.ParseProcedure()
 
 	if err != nil {
-		println("Procedure Parse Error: ", err.Error())
-		return
+		panic("Procedure Parse Error: " + err.Error())
 	}
 
 	procIR := procAST.codegen()
 
 	if procIR.IsNil() {
-		println("Procedure CodeGen Error: Could not create IR")
+		panic("Procedure CodeGen Error: Could not create IR")
 		return
 	}
-
-	procIR.Dump()
 }
 
 func handleExtern(parser *Parser) {
 	protoAST, err := parser.ParseExtern()
 
 	if err != nil {
-		println("Extern Parse Error: ", err.Error())
+		panic("Extern Parse Error: " + err.Error())
 		return
 	}
 
 	externIR := protoAST.codegen()
 
 	if externIR.IsNil() {
-		println("Extern CodeGen Error: Could not create IR")
+		panic("Extern CodeGen Error: Could not create IR")
 		return
 	}
-
-	externIR.Dump()
 }
 
 func handleTopLevelExpression(parser *Parser) {
 	topAST, err := parser.ParseTopLevelExpr()
 
 	if err != nil {
-		println("Top Level Expression Parse Error: ", err.Error())
+		panic("Top Level Expression Parse Error: " + err.Error())
 		return
 	}
 
 	topIR := topAST.codegen()
 
 	if topIR.IsNil() {
-		println("Top Level Expression CodeGen Error: Could not create IR")
+		panic("Top Level Expression CodeGen Error: Could not create IR")
 		return
 	}
-
-	topIR.Dump()
 }
 
 
@@ -134,4 +111,5 @@ func main() {
 	}
 
 	handle(parser)
+	module.Dump()
 }
