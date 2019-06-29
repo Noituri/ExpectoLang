@@ -231,7 +231,7 @@ func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 			}
 		}
 
-		return BinaryAST{
+		return &BinaryAST{
 			position(pos),
 			astBinary,
 			rune(binop),
@@ -282,7 +282,7 @@ func (p *Parser) parseIdentifier() AST {
 	p.lexer.NextToken()
 
 	if p.lexer.CurrentToken.kind != TokLParen {
-		return NumberLiteralAST{position(pos), astNumber, p.lexer.numVal}
+		return &VariableAST{position(pos), astVariable, name}
 	}
 
 	p.lexer.NextToken()
@@ -311,7 +311,7 @@ func (p *Parser) parseIdentifier() AST {
 
 	p.lexer.NextToken()
 
-	return CallAST{position(pos), astCall, name, args}
+	return &CallAST{position(pos), astCall, name, args}
 }
 
 func (p *Parser) parseNumber() AST {

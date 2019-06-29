@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/llir/ll/ast"
+	"ExpectoLang/llvm/bindings/go/llvm"
 )
 
 const (
 	astProcedure kind = iota
 	astBinary
 	astNumber
+	astVariable
 	astCall
 	astBlock
 	astPrototype
@@ -16,7 +17,7 @@ const (
 type AST interface {
 	Position() position
 	Kind() kind
-	codegen() ast.Value
+	codegen() llvm.Value
 }
 
 type position int
@@ -43,6 +44,12 @@ type BinaryAST struct {
 	Lhs, Rhs AST
 }
 
+type VariableAST struct {
+	position
+	kind
+	Name string
+}
+
 type CallAST struct {
 	position
 	kind
@@ -53,7 +60,7 @@ type CallAST struct {
 type BlockAST struct {
 	position
 	kind
-	body []AST
+	Body []AST
 }
 
 type ArgsPrototype struct {
