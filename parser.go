@@ -104,8 +104,6 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 		p.lexer.NextToken()
 	}
 
-	println("OVERHERE", p.lexer.CurrentToken.kind, p.lexer.CurrentChar)
-
 	return PrototypeAST{
 		position(pos),
 		astPrototype,
@@ -258,8 +256,6 @@ func (p *Parser) ParsePrimary() AST {
 		panic("Syntax Error: Extra end")
 	default:
 		p.lexer.NextToken()
-		println("RHS", string(rune(p.lexer.CurrentToken.val)), p.lexer.Identifier, p.lexer.CurrentToken.kind, p.lexer.CurrentChar)
-
 		return nil
 	}
 }

@@ -54,8 +54,6 @@ func handleTopLevelExpression(parser *Parser) {
 
 
 func handle(parser Parser) {
-	println(parser.lexer.CurrentToken.kind, parser.lexer.CurrentChar)
-
 	switch parser.lexer.CurrentToken.kind {
 	case TokEOF:
 		return
