@@ -76,3 +76,64 @@ func (c *CallAST) codegen() llvm.Value {
 
 	return builder.CreateCall(callee, argsValues, "calltmp")
 }
+
+func (p *PrototypeAST) codegen() llvm.Value {
+	args := make([]llvm.Type, 0, len(p.Args))
+
+	for range p.Args {
+		// TODO use args type
+		args = append(args, llvm.FloatType())
+	}
+
+	// TODO use p.returnType
+	procType := llvm.FunctionType(llvm.FloatType(), args, false)
+	proc := llvm.AddFunction(module, p.Name, procType)
+
+	for i, param := range proc.Params() {
+		param.SetName(p.Args[i].Name)
+	}
+
+	return proc
+}
+
+func (b *BlockAST) codegen() llvm.Value {
+	return llvm.Value{}
+}
+
+// TODO Check for redefinition
+func (p *ProcedureAST) codegen() llvm.Value {
+	proc := module.NamedFunction(p.Proto.Name)
+
+	if proc.IsNil() {
+		proc = p.Proto.codegen()
+	}
+
+	if proc.IsNil() {
+		panic(fmt.Sprintf(`Could not create procedure "%s"`, p.Proto.Name))
+	}
+
+	block := llvm.AddBasicBlock(proc, "entry")
+	builder.SetInsertPointAtEnd(block)
+
+	namedValues = map[string]llvm.Value{}
+
+	for _, param := range proc.Params() {
+		namedValues[param.Name()] = param
+	}
+
+	// TODO codegen whole body
+	retVal := p.Body.Body[0].codegen()
+
+	if retVal.IsNil() {
+		panic(fmt.Sprintf(`No return in procedure "%s"`, p.Proto.Name))
+	}
+
+	builder.CreateRet(retVal)
+
+	if llvm.VerifyFunction(proc, llvm.PrintMessageAction) != nil {
+		proc.EraseFromParentAsFunction()
+		panic(fmt.Sprintf(`Error occurred while verifing procedure "%s"`, p.Proto.Name))
+	}
+
+	return proc
+}
