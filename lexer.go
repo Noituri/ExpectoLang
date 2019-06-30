@@ -135,21 +135,53 @@ func (l *Lexer) isDigit() (stopLexing bool) {
 }
 
 func (l *Lexer) isComment() (stopLexing bool) {
-	if l.LastChar == '#' {
-		for ; ; {
-			if l.nextChar() != nil {
-				l.CurrentToken.kind = TokEOF
-				l.CurrentToken.val = -1
-				return true
+	if l.LastChar == '/' {
+		l.isEOF = l.nextChar() != nil
+		if l.LastChar == '/' {
+			for ; ; {
+				if l.nextChar() != nil {
+					l.CurrentToken.kind = TokEOF
+					l.CurrentToken.val = -1
+					return true
+				}
+
+				if l.LastChar == 13 || l.LastChar == 10 {
+					break
+				}
 			}
 
-			if l.LastChar == 13 || l.LastChar == 10 {
-				break
+			l.NextToken()
+			println(l.LastChar)
+			return true
+		} else if l.LastChar == '*' {
+			for ; ; {
+				if l.nextChar() != nil {
+					l.CurrentToken.kind = TokEOF
+					l.CurrentToken.val = -1
+					return true
+				}
+
+				if l.LastChar == '*' {
+					if l.nextChar() != nil {
+						l.CurrentToken.kind = TokEOF
+						l.CurrentToken.val = -1
+						return true
+					}
+
+					if l.LastChar == '/' {
+						if l.nextChar() != nil {
+							l.CurrentToken.kind = TokEOF
+							l.CurrentToken.val = -1
+							return true
+						}
+						break
+					}
+				}
 			}
+
+			l.NextToken()
+			return true
 		}
-
-		l.NextToken()
-		return true
 	}
 	return false
 }
