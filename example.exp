@@ -1,9 +1,8 @@
-pr add(a:float, v: float)
-    2 + 2
+fc add(a: float)
+    2 + a
 end
 
-extern sin()
-add(2,3)
-sin()
-
-add(3,2)
+fc main()
+    add(3)
+    3 + 1
+end

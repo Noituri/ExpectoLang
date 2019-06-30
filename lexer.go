@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	TokEOF = iota // End of string/file
-	TokProcedure        // pr (procedure) aka function
+	TokEOF       = iota // End of string/file
+	TokFunction         // function
 	TokEnd              // end of statements etc
 	TokIdentifier
 	TokReturn   // procedure return
@@ -76,8 +76,8 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 			}
 		}
 
-		if l.Identifier == "pr" {
-			l.CurrentToken.kind = TokProcedure
+		if l.Identifier == "fc" {
+			l.CurrentToken.kind = TokFunction
 			l.CurrentToken.val = -1
 			return true
 		}

@@ -1,7 +1,11 @@
-; ModuleID = 'example.bc'
+; ModuleID = 'root'
 source_filename = "root"
 
-define float @add(float %a, float %v) {
+declare float @printf(float %x)
+
+define float @main() {
 entry:
-  ret float 4.000000e+00
+	  %calltmp = call float @printf(float 4.000000e+00)
+	    ret float %calltmp
 }
+

@@ -33,6 +33,7 @@ func (b *BinaryAST) codegen() llvm.Value {
 		panic("null operands")
 	}
 
+	// TODO check types
 	switch b.Op {
 	case '+':
 		return builder.CreateFAdd(l, r, "addtmp")
@@ -111,7 +112,6 @@ func (p *ProcedureAST) codegen() llvm.Value {
 	if proc.IsNil() {
 		panic(fmt.Sprintf(`Could not create procedure "%s"`, p.Proto.Name))
 	}
-
 	block := llvm.AddBasicBlock(proc, "entry")
 	builder.SetInsertPointAtEnd(block)
 
@@ -121,8 +121,11 @@ func (p *ProcedureAST) codegen() llvm.Value {
 		namedValues[param.Name()] = param
 	}
 
-	// TODO codegen whole body
-	retVal := p.Body.Body[0].codegen()
+	for _, stmt := range p.Body.Body[:len(p.Body.Body) - 1] {
+		stmt.codegen()
+	}
+
+	retVal := p.Body.Body[len(p.Body.Body) - 1].codegen()
 
 	if retVal.IsNil() {
 		panic(fmt.Sprintf(`No return in procedure "%s"`, p.Proto.Name))

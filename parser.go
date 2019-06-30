@@ -113,7 +113,7 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 	}, nil
 }
 
-func (p *Parser) ParseProcedure() (ProcedureAST, error) {
+func (p *Parser) ParseFunction() (ProcedureAST, error) {
 	pos := p.lexer.CurrentChar
 	p.lexer.NextToken()
 	proto, err := p.ParsePrototype(false)
@@ -145,7 +145,7 @@ func (p *Parser) ParseProcedure() (ProcedureAST, error) {
 	}
 	return ProcedureAST{
 		position(pos),
-		astProcedure,
+		astFunction,
 		proto,
 		block,
 	}, nil
@@ -180,7 +180,7 @@ func (p *Parser) ParseTopLevelExpr() (ProcedureAST, error) {
 
 	return ProcedureAST{
 		position(pos),
-		astProcedure,
+		astFunction,
 		proto,
 		block,
 	}, nil
@@ -250,7 +250,7 @@ func (p *Parser) ParsePrimary() AST {
 		return p.parseNumber()
 	case TokLParen:
 		return p.parseParen()
-	case TokProcedure:
+	case TokFunction:
 		panic("Syntax Error: Cannot define function here")
 	case TokEnd:
 		panic("Syntax Error: Extra end")

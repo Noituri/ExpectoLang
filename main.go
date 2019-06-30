@@ -1,11 +1,12 @@
 package main
 
 import (
+	"ExpectoLang/llvm/bindings/go/llvm"
 	"io/ioutil"
 )
 
 func handleProcedure(parser *Parser) {
-	procAST, err := parser.ParseProcedure()
+	procAST, err := parser.ParseFunction()
 
 	if err != nil {
 		panic("Procedure Parse Error: " + err.Error())
@@ -57,9 +58,9 @@ func handle(parser Parser) {
 	switch parser.lexer.CurrentToken.kind {
 	case TokEOF:
 		return
-	case TokProcedure: {
+	case TokFunction: {
 		handleProcedure(&parser)
-		//fun, err := parser.ParseProcedure()
+		//fun, err := parser.ParseFunction()
 		//
 		//if err != nil {
 		//	println("Error: ", err.Error())
@@ -111,5 +112,9 @@ func main() {
 
 	parser.lexer.NextToken()
 	handle(parser)
+	if llvm.VerifyModule(module,  llvm.PrintMessageAction) != nil {
+		panic("Failed to verify module")
+	}
+
 	module.Dump()
 }

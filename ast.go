@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	astProcedure kind = iota
+	astFunction kind = iota
 	astBinary
 	astNumber
 	astVariable
