@@ -3,6 +3,7 @@ package main
 import (
 	"ExpectoLang/llvm/bindings/go/llvm"
 	"fmt"
+	"strings"
 )
 
 var (
@@ -12,7 +13,7 @@ var (
 )
 
 func (s *StringAST) codegen() llvm.Value {
-	return llvm.ConstArray(llvm.Int8Type(), []llvm.Value{llvm.ConstInt(llvm.Int8Type(), 44, false)})
+	return builder.CreateGlobalStringPtr(strings.ReplaceAll(s.Value, `\n`, "\n"), "strtmp")
 }
 
 func (n *NumberLiteralAST) codegen() llvm.Value {
@@ -71,10 +72,11 @@ func (c *CallAST) codegen() llvm.Value {
 
 	for _, arg := range c.args {
 		argVal := arg.codegen()
-
 		if argVal.IsNil() {
 			panic(fmt.Sprintf(`One of the arguments in procedure "%s" was null`, c.Callee))
 		}
+
+		argsValues = append(argsValues, argVal)
 	}
 
 	return builder.CreateCall(callee, argsValues, "calltmp")
@@ -95,15 +97,25 @@ func (p *PrototypeAST) codegen() llvm.Value {
 		}
 	}
 
-	// TODO use p.returnType
-	procType := llvm.FunctionType(llvm.FloatType(), args, false)
-	proc := llvm.AddFunction(module, p.Name, procType)
+	var fcType llvm.Type
 
-	for i, param := range proc.Params() {
+	switch p.ReturnType {
+	case LitFloat:
+		fcType = llvm.FunctionType(llvm.FloatType(), args, false)
+	case LitString:
+		fcType = llvm.FunctionType(llvm.PointerType(llvm.Int8Type(), 0), args, false)
+	default:
+		fcType = llvm.FunctionType(llvm.Int32Type(), args, false)
+		//panic(fmt.Sprintf("type-%s-does-no-exit", p.ReturnType))
+	}
+
+	fc := llvm.AddFunction(module, p.Name, fcType)
+
+	for i, param := range fc.Params() {
 		param.SetName(p.Args[i].Name)
 	}
 
-	return proc
+	return fc
 }
 
 // TODO use this to generate body

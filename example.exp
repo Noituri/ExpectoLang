@@ -1,9 +1,5 @@
-fc test(a: str)
-    2
-end
+@printf(x)
 
-fc main()
-    "lllol"
-    2 + 3
-    "lllol"
+fc main(): float
+    printf("Hello Expecto\n")
 end

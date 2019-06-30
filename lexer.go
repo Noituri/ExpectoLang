@@ -222,17 +222,13 @@ func (l *Lexer) isStr() (stopLexing bool) {
 		}
 
 		l.strVal = ""
-		for unicode.IsLetter(rune(l.LastChar)) {
+		for  l.LastChar != '"' {
 			l.strVal += string(rune(l.LastChar))
 
 			if l.nextChar() != nil {
 				l.isEOF = true
 				break
 			}
-		}
-
-		if l.LastChar != '"' {
-			panic("str is not closed")
 		}
 
 		l.isEOF = l.nextChar() != nil
