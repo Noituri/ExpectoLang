@@ -8,6 +8,7 @@ const (
 	astFunction kind = iota
 	astBinary
 	astNumber
+	astString
 	astVariable
 	astCall
 	astBlock
@@ -42,6 +43,12 @@ type BinaryAST struct {
 	kind
 	Op       rune
 	Lhs, Rhs AST
+}
+
+type StringAST struct {
+	position
+	kind
+	Value string
 }
 
 type VariableAST struct {

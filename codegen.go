@@ -11,6 +11,10 @@ var (
 	namedValues = map[string]llvm.Value{}
 )
 
+func (s *StringAST) codegen() llvm.Value {
+	return llvm.ConstArray(llvm.Int8Type(), []llvm.Value{llvm.ConstInt(llvm.Int8Type(), 44, false)})
+}
+
 func (n *NumberLiteralAST) codegen() llvm.Value {
 	return llvm.ConstFloat(llvm.FloatType(), n.Value)
 }
@@ -71,8 +75,6 @@ func (c *CallAST) codegen() llvm.Value {
 		if argVal.IsNil() {
 			panic(fmt.Sprintf(`One of the arguments in procedure "%s" was null`, c.Callee))
 		}
-
-		argsValues = append(argsValues, argVal)
 	}
 
 	return builder.CreateCall(callee, argsValues, "calltmp")
@@ -81,9 +83,16 @@ func (c *CallAST) codegen() llvm.Value {
 func (p *PrototypeAST) codegen() llvm.Value {
 	args := make([]llvm.Type, 0, len(p.Args))
 
-	for range p.Args {
+	for _, a := range p.Args {
 		// TODO use args type
-		args = append(args, llvm.FloatType())
+		switch a.ArgType {
+		case LitFloat:
+			args = append(args, llvm.FloatType())
+		case LitString:
+			args = append(args, llvm.PointerType(llvm.Int8Type(), 0))
+		default:
+			panic(fmt.Sprintf("type-%s-does-no-exit", a.ArgType))
+		}
 	}
 
 	// TODO use p.returnType
@@ -97,6 +106,7 @@ func (p *PrototypeAST) codegen() llvm.Value {
 	return proc
 }
 
+// TODO use this to generate body
 func (b *BlockAST) codegen() llvm.Value {
 	return llvm.Value{}
 }

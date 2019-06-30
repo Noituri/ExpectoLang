@@ -14,6 +14,7 @@ const (
 	TokReturn   // procedure return
 	TokExtern   // extern procedure
 	TokNumber   // number
+	TokStr		// string
 	TokLParen   // (
 	TokRParen   // )
 	TokUnknown  // Not specified type
@@ -31,6 +32,7 @@ type Lexer struct {
 	CurrentToken Token
 	Identifier   string
 	numVal       float64
+	strVal		 string
 	CurrentChar  int
 	LastChar     uint8
 	isEOF        bool
@@ -145,7 +147,6 @@ func (l *Lexer) isComment() (stopLexing bool) {
 			}
 
 			l.NextToken()
-			println(l.LastChar)
 			return true
 		} else if l.LastChar == '*' {
 			for ; ; {
@@ -212,6 +213,38 @@ func (l *Lexer) isExtern() (stopLexing bool) {
 	return false
 }
 
+func (l *Lexer) isStr() (stopLexing bool) {
+	if l.LastChar == '"' {
+		if l.nextChar() != nil {
+			l.CurrentToken.kind = TokEOF
+			l.CurrentToken.val = -1
+			return true
+		}
+
+		l.strVal = ""
+		for unicode.IsLetter(rune(l.LastChar)) {
+			l.strVal += string(rune(l.LastChar))
+
+			if l.nextChar() != nil {
+				l.isEOF = true
+				break
+			}
+		}
+
+		if l.LastChar != '"' {
+			panic("str is not closed")
+		}
+
+		l.isEOF = l.nextChar() != nil
+
+		l.CurrentToken.kind = TokStr
+		l.CurrentToken.val = -1
+		return true
+	}
+
+	return false
+}
+
 func (l *Lexer) NextToken() {
 	if l.isEOF {
 		l.CurrentToken.kind = TokEOF
@@ -228,6 +261,10 @@ func (l *Lexer) NextToken() {
 	}
 
 	if l.isExtern() {
+		return
+	}
+
+	if l.isStr() {
 		return
 	}
 

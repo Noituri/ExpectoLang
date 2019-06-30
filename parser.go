@@ -17,7 +17,7 @@ func (p *Parser) getType(t string) string {
 	case LitFloat:
 		return LitFloat
 	case LitString:
-		panic("NOT IMPLEMENTED")
+		return LitString
 	default:
 		panic(fmt.Sprintf("type-%s-does-no-exit", t))
 	}
@@ -46,7 +46,7 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 			if callee {
 				argsNames = append(argsNames, ArgsPrototype{
 					Name:    name,
-					ArgType: "unknown",
+					ArgType: LitString,
 				})
 			} else {
 				p.lexer.NextToken()
@@ -245,6 +245,8 @@ func (p *Parser) ParsePrimary() AST {
 	switch p.lexer.CurrentToken.kind {
 	case TokIdentifier:
 		return p.parseIdentifier()
+	case TokStr:
+		return p.parseStr()
 	case TokNumber:
 		return p.parseNumber()
 	case TokLParen:
@@ -310,6 +312,14 @@ func (p *Parser) parseIdentifier() AST {
 
 	p.lexer.NextToken()
 	return &CallAST{position(pos), astCall, name, args}
+}
+
+func (p *Parser) parseStr() AST {
+	pos := p.lexer.CurrentChar
+	val := p.lexer.strVal
+
+	p.lexer.NextToken()
+	return &StringAST{position(pos), astString, val}
 }
 
 func (p *Parser) parseNumber() AST {
