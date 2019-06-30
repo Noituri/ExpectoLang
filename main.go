@@ -53,37 +53,38 @@ func handleTopLevelExpression(parser *Parser) {
 	}
 }
 
-
 func handle(parser Parser) {
 	switch parser.lexer.CurrentToken.kind {
 	case TokEOF:
 		return
-	case TokFunction: {
-		handleProcedure(&parser)
-		//fun, err := parser.ParseFunction()
-		//
-		//if err != nil {
-		//	println("Error: ", err.Error())
-		//	return
-		//}
-		//
-		//b := &bytes.Buffer{}
-		//memviz.Map(b, &fun)
-		//println(b.String())
-	}
+	case TokFunction:
+		{
+			handleProcedure(&parser)
+			//fun, err := parser.ParseFunction()
+			//
+			//if err != nil {
+			//	println("Error: ", err.Error())
+			//	return
+			//}
+			//
+			//b := &bytes.Buffer{}
+			//memviz.Map(b, &fun)
+			//println(b.String())
+		}
 	case TokExtern:
 		handleExtern(&parser)
-	default: {
-		handleTopLevelExpression(&parser)
-		//fun, err := parser.ParseTopLevelExpr()
-		//if err != nil {
-		//	handle(parser)
-		//	return
-		//}
-		//b := &bytes.Buffer{}
-		//memviz.Map(b, &fun)
-		//println(b.String())
-	}
+	default:
+		{
+			handleTopLevelExpression(&parser)
+			//fun, err := parser.ParseTopLevelExpr()
+			//if err != nil {
+			//	handle(parser)
+			//	return
+			//}
+			//b := &bytes.Buffer{}
+			//memviz.Map(b, &fun)
+			//println(b.String())
+		}
 	}
 
 	handle(parser)
@@ -97,9 +98,9 @@ func main() {
 
 	parser := Parser{
 		lexer: Lexer{
-			Source: string(dat),
+			Source:      string(dat),
 			CurrentChar: -1,
-			LastChar: 32,
+			LastChar:    32,
 		},
 		binOpPrecedence: map[string]int{
 			"<": 10,
@@ -112,7 +113,7 @@ func main() {
 
 	parser.lexer.NextToken()
 	handle(parser)
-	if llvm.VerifyModule(module,  llvm.PrintMessageAction) != nil {
+	if llvm.VerifyModule(module, llvm.PrintMessageAction) != nil {
 		panic("Failed to verify module")
 	}
 

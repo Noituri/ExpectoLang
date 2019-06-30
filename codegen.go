@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	module 		= llvm.NewModule("root")
+	module      = llvm.NewModule("expectoroot")
 	builder     = llvm.NewBuilder()
 	namedValues = map[string]llvm.Value{}
 )
@@ -102,7 +102,7 @@ func (b *BlockAST) codegen() llvm.Value {
 }
 
 // TODO Check for redefinition
-func (p *ProcedureAST) codegen() llvm.Value {
+func (p *FunctionAST) codegen() llvm.Value {
 	proc := module.NamedFunction(p.Proto.Name)
 
 	if proc.IsNil() {
@@ -121,11 +121,11 @@ func (p *ProcedureAST) codegen() llvm.Value {
 		namedValues[param.Name()] = param
 	}
 
-	for _, stmt := range p.Body.Body[:len(p.Body.Body) - 1] {
+	for _, stmt := range p.Body.Body[:len(p.Body.Body)-1] {
 		stmt.codegen()
 	}
 
-	retVal := p.Body.Body[len(p.Body.Body) - 1].codegen()
+	retVal := p.Body.Body[len(p.Body.Body)-1].codegen()
 
 	if retVal.IsNil() {
 		panic(fmt.Sprintf(`No return in procedure "%s"`, p.Proto.Name))

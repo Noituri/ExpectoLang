@@ -113,20 +113,20 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 	}, nil
 }
 
-func (p *Parser) ParseFunction() (ProcedureAST, error) {
+func (p *Parser) ParseFunction() (FunctionAST, error) {
 	pos := p.lexer.CurrentChar
 	p.lexer.NextToken()
 	proto, err := p.ParsePrototype(false)
 
 	if err != nil {
-		return ProcedureAST{}, err
+		return FunctionAST{}, err
 	}
 
 	body := []AST{}
 
 	for ; p.lexer.CurrentToken.kind != TokEnd; {
 		if p.lexer.CurrentToken.kind == TokEOF {
-			return ProcedureAST{}, errors.New("no-end")
+			return FunctionAST{}, errors.New("no-end")
 		}
 
 		expr := p.ParseExpression()
@@ -143,7 +143,7 @@ func (p *Parser) ParseFunction() (ProcedureAST, error) {
 		astBlock,
 		body,
 	}
-	return ProcedureAST{
+	return FunctionAST{
 		position(pos),
 		astFunction,
 		proto,
@@ -156,12 +156,12 @@ func (p *Parser) ParseExtern() (PrototypeAST, error) {
 	return p.ParsePrototype(true)
 }
 
-func (p *Parser) ParseTopLevelExpr() (ProcedureAST, error) {
+func (p *Parser) ParseTopLevelExpr() (FunctionAST, error) {
 	pos := p.lexer.CurrentChar
 
 	expr := p.ParseExpression()
 	if expr == nil {
-		return ProcedureAST{}, errors.New("no-expression")
+		return FunctionAST{}, errors.New("no-expression")
 	}
 
 	proto := PrototypeAST{
@@ -178,7 +178,7 @@ func (p *Parser) ParseTopLevelExpr() (ProcedureAST, error) {
 		[]AST{expr},
 	}
 
-	return ProcedureAST{
+	return FunctionAST{
 		position(pos),
 		astFunction,
 		proto,
@@ -190,7 +190,6 @@ func (p *Parser) ParseExpression() AST {
 	lhs := p.ParsePrimary()
 
 	if lhs == nil {
-
 		return nil
 	}
 
@@ -232,7 +231,7 @@ func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 			}
 		}
 
-		return &BinaryAST{
+		lhs = &BinaryAST{
 			position(pos),
 			astBinary,
 			rune(binop),
@@ -287,7 +286,6 @@ func (p *Parser) parseIdentifier() AST {
 	}
 
 	p.lexer.NextToken()
-
 
 	args := []AST{}
 

@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	TokEOF       = iota // End of string/file
-	TokFunction         // function
-	TokEnd              // end of statements etc
+	TokEOF      = iota // End of string/file
+	TokFunction        // function
+	TokEnd             // end of statements etc
 	TokIdentifier
 	TokReturn   // procedure return
 	TokExtern   // extern procedure

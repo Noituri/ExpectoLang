@@ -1,8 +1,4 @@
-fc add(a: float)
-    2 + a
-end
-
 fc main()
-    add(3)
-    3 + 1
+    2 + 3
+    + 1
 end

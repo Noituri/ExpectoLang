@@ -34,7 +34,7 @@ func (k kind) Kind() kind {
 type NumberLiteralAST struct {
 	position
 	kind
-	Value  float64
+	Value float64
 }
 
 type BinaryAST struct {
@@ -54,7 +54,7 @@ type CallAST struct {
 	position
 	kind
 	Callee string
-	args []AST
+	args   []AST
 }
 
 type BlockAST struct {
@@ -64,19 +64,19 @@ type BlockAST struct {
 }
 
 type ArgsPrototype struct {
-	Name string
+	Name    string
 	ArgType string
 }
 
 type PrototypeAST struct {
 	position
 	kind
-	Name 	   string
-	Args 	   []ArgsPrototype
+	Name       string
+	Args       []ArgsPrototype
 	ReturnType string
 }
 
-type ProcedureAST struct {
+type FunctionAST struct {
 	position
 	kind
 	Proto PrototypeAST
