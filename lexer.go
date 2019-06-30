@@ -82,12 +82,6 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 			return true
 		}
 
-		if l.Identifier == "extern" {
-			l.CurrentToken.kind = TokExtern
-			l.CurrentToken.val = -1
-			return true
-		}
-
 		if l.Identifier == "end" {
 			l.CurrentToken.kind = TokEnd
 			l.CurrentToken.val = -1
@@ -206,6 +200,18 @@ func (l *Lexer) isParen() (stopLexing bool) {
 	return false
 }
 
+func (l *Lexer) isExtern() (stopLexing bool) {
+	if l.LastChar == '@' {
+		l.isEOF = l.nextChar() != nil
+
+		l.CurrentToken.kind = TokExtern
+		l.CurrentToken.val = -1
+		return true
+	}
+
+	return false
+}
+
 func (l *Lexer) NextToken() {
 	if l.isEOF {
 		l.CurrentToken.kind = TokEOF
@@ -218,6 +224,10 @@ func (l *Lexer) NextToken() {
 	}
 
 	if l.isAlphabetic() {
+		return
+	}
+
+	if l.isExtern() {
 		return
 	}
 
@@ -235,8 +245,7 @@ func (l *Lexer) NextToken() {
 
 	tempChar := l.LastChar
 
-	if l.nextChar() != nil {
-	}
+	l.isEOF = l.nextChar() != nil
 
 	l.CurrentToken.kind = TokUnknown
 	l.CurrentToken.val = int(tempChar)
