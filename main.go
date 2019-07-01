@@ -110,6 +110,9 @@ func main() {
 			"/": 40,
 		},
 	}
+
+	InitModuleAndPassManager()
+
 	parser.lexer.NextToken()
 	handle(parser)
 	if llvm.VerifyModule(module, llvm.PrintMessageAction) != nil {

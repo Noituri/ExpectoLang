@@ -7,10 +7,20 @@ import (
 )
 
 var (
-	module      = llvm.NewModule("expectoroot")
-	builder     = llvm.NewBuilder()
-	namedValues = map[string]llvm.Value{}
+	module        llvm.Module
+	builder       = llvm.NewBuilder()
+	namedValues   = map[string]llvm.Value{}
+	fcPassManager llvm.PassManager
 )
+
+func InitModuleAndPassManager() {
+	module = llvm.NewModule("expectoroot")
+	fcPassManager = llvm.NewFunctionPassManagerForModule(module)
+	fcPassManager.AddInstructionCombiningPass()
+	fcPassManager.AddGVNPass()
+	fcPassManager.AddCFGSimplificationPass()
+	fcPassManager.InitializeFunc()
+}
 
 func (s *StringAST) codegen() llvm.Value {
 	return builder.CreateGlobalStringPtr(strings.ReplaceAll(s.Value, `\n`, "\n"), "strtmp")
@@ -159,6 +169,8 @@ func (p *FunctionAST) codegen() llvm.Value {
 		proc.EraseFromParentAsFunction()
 		panic(fmt.Sprintf(`Error occurred while verifing procedure "%s"`, p.Proto.Name))
 	}
+
+	fcPassManager.RunFunc(proc)
 
 	return proc
 }
