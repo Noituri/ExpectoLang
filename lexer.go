@@ -108,7 +108,6 @@ func (l *Lexer) isDigit() (stopLexing bool) {
 		tempStr := ""
 		wasDot := l.LastChar == '.'
 
-		//TODO check if there is second dot in number
 		for ; ; {
 			tempStr += string(rune(l.LastChar))
 			if l.nextChar() != nil {

@@ -255,7 +255,10 @@ func (p *Parser) ParsePrimary() AST {
 		panic("Syntax Error: Cannot define function here")
 	case TokEnd:
 		panic("Syntax Error: Extra end")
+	case TokRParen:
+		panic("Syntax Error: Invalid use of ')'")
 	default:
+		println(p.lexer.CurrentToken.kind)
 		p.lexer.NextToken()
 		return nil
 	}
@@ -269,7 +272,7 @@ func (p *Parser) parseParen() AST {
 	}
 
 	if p.lexer.CurrentToken.kind != TokRParen {
-		return nil
+		panic("Syntax Error: Parenthesis are not closed")
 	}
 
 	p.lexer.NextToken()

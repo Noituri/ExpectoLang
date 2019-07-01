@@ -1,10 +1,3 @@
-@printf(x)
-
-fc add(a: float, b: float): float
-    a + b
-end
-
 fc main(): float
-    printf("Hello Expecto\n")
-    3.02 + 2.1 * (add(4, 1) + 4)
+    3 + 2 + 2 + 2)
 end
