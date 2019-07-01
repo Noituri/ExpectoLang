@@ -106,6 +106,7 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 func (l *Lexer) isDigit() (stopLexing bool) {
 	if unicode.IsNumber(rune(l.LastChar)) || l.LastChar == '.' {
 		tempStr := ""
+		wasDot := l.LastChar == '.'
 
 		//TODO check if there is second dot in number
 		for ; ; {
@@ -114,6 +115,14 @@ func (l *Lexer) isDigit() (stopLexing bool) {
 				l.CurrentToken.kind = TokEOF
 				l.CurrentToken.val = -1
 				return true
+			}
+
+			if l.LastChar == '.' {
+				if wasDot {
+					panic("Invalid use of '.'")
+				} else {
+					wasDot = true
+				}
 			}
 
 			if !unicode.IsNumber(rune(l.LastChar)) && l.LastChar != 46 {
