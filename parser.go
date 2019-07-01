@@ -251,6 +251,8 @@ func (p *Parser) ParsePrimary() AST {
 		return p.parseNumber()
 	case TokLParen:
 		return p.parseParen()
+	case TokIf:
+		return p.parseIfElse()
 	case TokFunction:
 		panic("Syntax Error: Cannot define function here")
 	case TokEnd:
@@ -331,4 +333,50 @@ func (p *Parser) parseNumber() AST {
 
 	p.lexer.NextToken()
 	return &NumberLiteralAST{position(pos), astNumber, val}
+}
+
+func (p *Parser) parseIfElse() AST {
+	pos := p.lexer.CurrentChar
+	p.lexer.NextToken()
+
+	cond := p.ParseExpression()
+	if cond == nil {
+		panic("Syntax Error: No condition inside If")
+	}
+
+	trueBody := []AST{}
+
+	for ;p.lexer.CurrentToken.kind != TokElse && p.lexer.CurrentToken.kind != TokEnd; {
+		if p.lexer.CurrentToken.kind == TokEOF {
+			panic("Syntax Error: No end")
+		}
+
+		body := p.ParseExpression()
+		if body != nil {
+			trueBody = append(trueBody, body)
+		}
+	}
+
+	falseBody := []AST{}
+
+	if p.lexer.CurrentToken.kind == TokElse {
+		for ;p.lexer.CurrentToken.kind != TokEnd; {
+			if p.lexer.CurrentToken.kind == TokEOF {
+				panic("Syntax Error: No end")
+			}
+
+			body := p.ParseExpression()
+			if body != nil {
+				falseBody = append(falseBody, body)
+			}
+		}
+	}
+
+	return &IfElseAST{
+		position(pos),
+		astIfElse,
+		cond,
+		trueBody,
+		falseBody,
+	}
 }

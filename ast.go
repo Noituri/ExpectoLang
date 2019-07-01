@@ -13,6 +13,7 @@ const (
 	astCall
 	astBlock
 	astPrototype
+	astIfElse
 )
 
 type AST interface {
@@ -57,6 +58,15 @@ type VariableAST struct {
 	Name string
 }
 
+
+type IfElseAST struct {
+	position
+	kind
+	Condition AST
+	TrueBody  []AST
+	FalseBody []AST
+}
+
 type CallAST struct {
 	position
 	kind
@@ -67,7 +77,7 @@ type CallAST struct {
 type BlockAST struct {
 	position
 	kind
-	Body []AST
+	Elements []AST
 }
 
 type ArgsPrototype struct {

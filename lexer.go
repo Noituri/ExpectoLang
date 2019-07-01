@@ -17,6 +17,8 @@ const (
 	TokStr		// string
 	TokLParen   // (
 	TokRParen   // )
+	TokIf		// If
+	TokElse		// If else
 	TokUnknown  // Not specified type
 )
 
@@ -96,6 +98,18 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 			return true
 		}
 
+		if l.Identifier == "if" {
+			l.CurrentToken.kind = TokIf
+			l.CurrentToken.val = -1
+			return true
+		}
+
+		if l.Identifier == "else" {
+			l.CurrentToken.kind = TokElse
+			l.CurrentToken.val = -1
+			return true
+		}
+
 		l.CurrentToken.kind = TokIdentifier
 		l.CurrentToken.val = -1
 		return true
@@ -108,7 +122,7 @@ func (l *Lexer) isDigit() (stopLexing bool) {
 		tempStr := ""
 		wasDot := l.LastChar == '.'
 
-		for ; ; {
+		for ;; {
 			tempStr += string(rune(l.LastChar))
 			if l.nextChar() != nil {
 				l.CurrentToken.kind = TokEOF

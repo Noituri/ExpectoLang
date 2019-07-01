@@ -40,7 +40,7 @@ func (v *VariableAST) codegen() llvm.Value {
 	return val
 }
 
-func (b *BinaryAST) codegen() llvm.Value {
+func (b *BinaryAST) numberCodegen() llvm.Value {
 	l := b.Lhs.codegen()
 	r := b.Rhs.codegen()
 
@@ -48,7 +48,6 @@ func (b *BinaryAST) codegen() llvm.Value {
 		panic("null operands")
 	}
 
-	// TODO check types
 	switch b.Op {
 	case '+':
 		return builder.CreateFAdd(l, r, "addtmp")
@@ -65,6 +64,34 @@ func (b *BinaryAST) codegen() llvm.Value {
 	default:
 		panic(fmt.Sprintf(`Operator "%c" is invalid`, b.Op))
 	}
+}
+
+func (b *BinaryAST) strCodegen() llvm.Value {
+	l := b.Lhs.codegen()
+	r := b.Rhs.codegen()
+
+	if l.IsNil() || r.IsNil() {
+		panic("null operands")
+	}
+
+	switch b.Op {
+	case '+':
+		// Todo figure out string concat
+		panic("not implemented: String Concat")
+	default:
+		panic(fmt.Sprintf(`Operator "%c" is invalid`, b.Op))
+	}
+}
+
+func (b *BinaryAST) codegen() llvm.Value {
+	if b.Lhs.Kind() == astNumber && b.Rhs.Kind() == astNumber {
+		return b.numberCodegen()
+	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astString {
+		return b.strCodegen()
+	}
+
+	return b.numberCodegen()
+
 }
 
 func (c *CallAST) codegen() llvm.Value {
@@ -106,7 +133,6 @@ func (p *PrototypeAST) codegen() llvm.Value {
 			panic(fmt.Sprintf("type-%s-does-no-exit", a.ArgType))
 		}
 	}
-
 	var fcType llvm.Type
 
 	switch p.ReturnType {
@@ -115,6 +141,7 @@ func (p *PrototypeAST) codegen() llvm.Value {
 	case LitString:
 		fcType = llvm.FunctionType(llvm.PointerType(llvm.Int8Type(), 0), args, false)
 	default:
+		// TODO DEBUG
 		fcType = llvm.FunctionType(llvm.Int32Type(), args, false)
 		//panic(fmt.Sprintf("type-%s-does-no-exit", p.ReturnType))
 	}
@@ -153,11 +180,11 @@ func (p *FunctionAST) codegen() llvm.Value {
 		namedValues[param.Name()] = param
 	}
 
-	for _, stmt := range p.Body.Body[:len(p.Body.Body)-1] {
+	for _, stmt := range p.Body.Elements[:len(p.Body.Elements)-1] {
 		stmt.codegen()
 	}
 
-	retVal := p.Body.Body[len(p.Body.Body)-1].codegen()
+	retVal := p.Body.Elements[len(p.Body.Elements)-1].codegen()
 
 	if retVal.IsNil() {
 		panic(fmt.Sprintf(`No return in procedure "%s"`, p.Proto.Name))
@@ -173,4 +200,39 @@ func (p *FunctionAST) codegen() llvm.Value {
 	fcPassManager.RunFunc(proc)
 
 	return proc
+}
+/*
+Builder.SetInsertPoint(ThenBB);
+
+Value *ThenV = Then->codegen();
+if (!ThenV)
+  return nullptr;
+
+Builder.CreateBr(MergeBB);
+// Codegen of 'Then' can change the current block, update ThenBB for the PHI.
+ThenBB = Builder.GetInsertBlock();
+ */
+
+func (i *IfElseAST) codegen() llvm.Value {
+	cond := i.Condition.codegen()
+	if cond.IsNil() {
+		panic("No condition")
+	}
+
+	cond = builder.CreateFCmp(llvm.FloatPredicateTrue, cond, llvm.ConstFloat(llvm.FloatType(), 1), "cond")
+
+	fc := builder.GetInsertBlock().Parent()
+	thenBlock := llvm.AddBasicBlock(fc, "then")
+	elseBlock := llvm.AddBasicBlock(fc, "else")
+	mergeBlock := llvm.AddBasicBlock(fc, "if")
+
+	builder.CreateCondBr(cond, thenBlock, elseBlock)
+	builder.SetInsertPointAtEnd(thenBlock)
+
+	for _, v := range i.TrueBody {
+		val := v.codegen()
+		if val.IsNil() {
+			panic("Could not codegen body of the if cond")
+		}
+	}
 }
