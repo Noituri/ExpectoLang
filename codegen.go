@@ -142,7 +142,8 @@ func (p *PrototypeAST) codegen() llvm.Value {
 		fcType = llvm.FunctionType(llvm.PointerType(llvm.Int8Type(), 0), args, false)
 	default:
 		// TODO DEBUG
-		fcType = llvm.FunctionType(llvm.Int32Type(), args, false)
+		fcType = llvm.FunctionType(llvm.FloatType(), args, false)
+		//fcType = llvm.FunctionType(llvm.Int32Type(), args, false)
 		//panic(fmt.Sprintf("type-%s-does-no-exit", p.ReturnType))
 	}
 
@@ -201,17 +202,6 @@ func (p *FunctionAST) codegen() llvm.Value {
 
 	return proc
 }
-/*
-Builder.SetInsertPoint(ThenBB);
-
-Value *ThenV = Then->codegen();
-if (!ThenV)
-  return nullptr;
-
-Builder.CreateBr(MergeBB);
-// Codegen of 'Then' can change the current block, update ThenBB for the PHI.
-ThenBB = Builder.GetInsertBlock();
- */
 
 func (i *IfElseAST) codegen() llvm.Value {
 	cond := i.Condition.codegen()
@@ -219,20 +209,42 @@ func (i *IfElseAST) codegen() llvm.Value {
 		panic("No condition")
 	}
 
-	cond = builder.CreateFCmp(llvm.FloatPredicateTrue, cond, llvm.ConstFloat(llvm.FloatType(), 1), "cond")
+	cond = builder.CreateFCmp(llvm.FloatONE, cond, llvm.ConstFloat(llvm.FloatType(), 0), "cond")
 
 	fc := builder.GetInsertBlock().Parent()
 	thenBlock := llvm.AddBasicBlock(fc, "then")
 	elseBlock := llvm.AddBasicBlock(fc, "else")
-	mergeBlock := llvm.AddBasicBlock(fc, "if")
+	exitBlock := llvm.AddBasicBlock(fc, "exit")
 
 	builder.CreateCondBr(cond, thenBlock, elseBlock)
 	builder.SetInsertPointAtEnd(thenBlock)
 
-	for _, v := range i.TrueBody {
+	thenVals := []llvm.Value{}
+	for _, v := range i.TrueBody.Elements {
 		val := v.codegen()
 		if val.IsNil() {
 			panic("Could not codegen body of the if cond")
 		}
+		thenVals = append(thenVals, val)
 	}
+
+	builder.CreateBr(exitBlock)
+	thenBlock = builder.GetInsertBlock()
+	builder.SetInsertPointAtEnd(elseBlock)
+
+	elseVals := []llvm.Value{}
+	for _, v := range i.FalseBody.Elements {
+		val := v.codegen()
+		if val.IsNil() {
+			panic("Could not codegen body of the if cond")
+		}
+		elseVals = append(elseVals, val)
+	}
+
+	builder.CreateBr(exitBlock)
+	elseBlock = builder.GetInsertBlock()
+
+	builder.SetInsertPointAtEnd(exitBlock)
+
+	return cond
 }

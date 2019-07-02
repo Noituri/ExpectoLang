@@ -1,5 +1,27 @@
 @printf(x)
 
 fc main(): float
+    if 1
+        printf("sss\n")
+        printf("ss2s\n")
+            if 1
+                printf("sss\n")
+                printf("ss2s\n")
+            else
+                printf("sss\n")
+                2 + 4
+                    if 1
+                        printf("sss\n")
+                        printf("ss2s\n")
+                    else
+                        printf("sss\n")
+                        2 + 4
+                    end
+            end
+    else
+        printf("sss\n")
+        2 + 4
+    end
+    printf("I'm done")
     3 + 2 + (2 + 2)
 end

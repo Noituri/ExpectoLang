@@ -360,6 +360,7 @@ func (p *Parser) parseIfElse() AST {
 	falseBody := []AST{}
 
 	if p.lexer.CurrentToken.kind == TokElse {
+		p.lexer.NextToken()
 		for ;p.lexer.CurrentToken.kind != TokEnd; {
 			if p.lexer.CurrentToken.kind == TokEOF {
 				panic("Syntax Error: No end")
@@ -372,11 +373,21 @@ func (p *Parser) parseIfElse() AST {
 		}
 	}
 
+	p.lexer.NextToken()
+
 	return &IfElseAST{
 		position(pos),
 		astIfElse,
 		cond,
-		trueBody,
-		falseBody,
+		BlockAST{
+			position(pos),
+			astBlock,
+			trueBody,
+		},
+		BlockAST{
+			position(pos),
+			astBlock,
+			falseBody,
+		},
 	}
 }

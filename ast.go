@@ -63,8 +63,8 @@ type IfElseAST struct {
 	position
 	kind
 	Condition AST
-	TrueBody  []AST
-	FalseBody []AST
+	TrueBody  BlockAST
+	FalseBody BlockAST
 }
 
 type CallAST struct {
