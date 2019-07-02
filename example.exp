@@ -8,5 +8,14 @@ end
 fc main(): float
     call()
     printf("I'm done\n")
+
+    if 1
+        printf("true")
+    elif 30
+        printf("elif")
+    else
+        printf("false")
+    end
+
     3 + 2 + (2 + 2)
 end

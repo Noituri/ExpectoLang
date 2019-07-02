@@ -386,7 +386,17 @@ func (p *Parser) parseIfElse() AST {
 				tempBody = append(tempBody, body)
 			}
 		}
-		// TODO build BlockAST
+
+		elifBody = append(elifBody, ElifAST{
+			position(pos),
+			astIfElse,
+			elifCond,
+			BlockAST{
+				position(pos),
+				astBlock,
+				tempBody,
+			},
+		})
 	}
 
 	falseBody := []AST{}

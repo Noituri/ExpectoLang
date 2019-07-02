@@ -157,8 +157,12 @@ func (p *PrototypeAST) codegen() llvm.Value {
 }
 
 // TODO use this to generate body
-func (b *BlockAST) codegen() llvm.Value {
-	return llvm.Value{}
+func (b *BlockAST) codegen() []llvm.Value {
+	elements := []llvm.Value{}
+	for _, stmt := range b.Elements {
+		elements = append(elements, stmt.codegen())
+	}
+	return elements
 }
 
 // TODO Check for redefinition
@@ -181,11 +185,9 @@ func (p *FunctionAST) codegen() llvm.Value {
 		namedValues[param.Name()] = param
 	}
 
-	for _, stmt := range p.Body.Elements[:len(p.Body.Elements)-1] {
-		stmt.codegen()
-	}
+	elements := p.Body.codegen()
 
-	retVal := p.Body.Elements[len(p.Body.Elements)-1].codegen()
+	retVal := elements[len(p.Body.Elements)-1]
 
 	if retVal.IsNil() {
 		panic(fmt.Sprintf(`No return in procedure "%s"`, p.Proto.Name))
@@ -198,7 +200,7 @@ func (p *FunctionAST) codegen() llvm.Value {
 		panic(fmt.Sprintf(`Error occurred while verifing procedure "%s"`, p.Proto.Name))
 	}
 
-	fcPassManager.RunFunc(proc)
+	//fcPassManager.RunFunc(proc)
 
 	return proc
 }
@@ -219,6 +221,7 @@ func (i *IfElseAST) codegen() llvm.Value {
 	builder.CreateCondBr(cond, thenBlock, elseBlock)
 	builder.SetInsertPointAtEnd(thenBlock)
 
+	// @todo use BlockAST.codegen()
 	thenVals := []llvm.Value{}
 	for _, v := range i.TrueBody.Elements {
 		val := v.codegen()
@@ -230,19 +233,33 @@ func (i *IfElseAST) codegen() llvm.Value {
 
 	builder.CreateBr(exitBlock)
 	thenBlock = builder.GetInsertBlock()
-	builder.SetInsertPointAtEnd(elseBlock)
 
-	elseVals := []llvm.Value{}
-	for _, v := range i.FalseBody.Elements {
-		val := v.codegen()
-		if val.IsNil() {
-			panic("Could not codegen body of the if cond")
-		}
-		elseVals = append(elseVals, val)
+	if len(i.ElifBody) != 0 {
+		builder.SetInsertPointAtEnd(elseBlock)
+		elifThenBlock := llvm.AddBasicBlock(fc, "then")
+		elifElseBlock := llvm.AddBasicBlock(fc, "else")
+		builder.CreateCondBr(cond, elifThenBlock, elifElseBlock)
+		elseBlock = llvm.AddBasicBlock(fc, "else")
+		builder.SetInsertPointAtEnd(elifThenBlock)
+		builder.CreateBr(exitBlock)
+
+		builder.SetInsertPointAtEnd(elifElseBlock)
+		builder.CreateBr(exitBlock)
 	}
 
+	builder.SetInsertPointAtEnd(elseBlock)
+
+	//elseVals := []llvm.Value{}
+	//for _, v := range i.FalseBody.Elements {
+	//	val := v.codegen()
+	//	if val.IsNil() {
+	//		panic("Could not codegen body of the if cond")
+	//	}
+	//	elseVals = append(elseVals, val)
+	//}
+	//
 	builder.CreateBr(exitBlock)
-	elseBlock = builder.GetInsertBlock()
+	//elseBlock = builder.GetInsertBlock()
 
 	builder.SetInsertPointAtEnd(exitBlock)
 
