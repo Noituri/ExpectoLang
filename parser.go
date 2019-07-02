@@ -343,12 +343,11 @@ func (p *Parser) parseIfElse() AST {
 
 	cond := p.ParseExpression()
 	if cond == nil {
-		panic("Syntax Error: No condition inside If")
+		panic("Syntax Error: No condition inside if")
 	}
 
 	trueBody := []AST{}
-
-	for ;p.lexer.CurrentToken.kind != TokElse && p.lexer.CurrentToken.kind != TokEnd; {
+	for ;p.lexer.CurrentToken.kind != TokElse && p.lexer.CurrentToken.kind != TokElif && p.lexer.CurrentToken.kind != TokEnd; {
 		if p.lexer.CurrentToken.kind == TokEOF {
 			panic("Syntax Error: No end")
 		}
@@ -359,8 +358,38 @@ func (p *Parser) parseIfElse() AST {
 		}
 	}
 
-	falseBody := []AST{}
+	elifBody := []ElifAST{}
+	for ;; {
+		if p.lexer.CurrentToken.kind == TokEOF {
+			panic("Syntax Error: No end")
+		}
 
+		if p.lexer.CurrentToken.kind != TokElif {
+			break
+		}
+
+		p.lexer.NextToken()
+
+		elifCond := p.ParseExpression()
+		if elifCond == nil {
+			panic("Syntax Error: No condition inside elif")
+		}
+
+		tempBody := []AST{}
+		for ;p.lexer.CurrentToken.kind != TokEnd && p.lexer.CurrentToken.kind != TokElse && p.lexer.CurrentToken.kind != TokElif; {
+			if p.lexer.CurrentToken.kind == TokEOF {
+				panic("Syntax Error: No end")
+			}
+
+			body := p.ParseExpression()
+			if body != nil {
+				tempBody = append(tempBody, body)
+			}
+		}
+		// TODO build BlockAST
+	}
+
+	falseBody := []AST{}
 	if p.lexer.CurrentToken.kind == TokElse {
 		p.lexer.NextToken()
 		for ;p.lexer.CurrentToken.kind != TokEnd; {
@@ -391,5 +420,6 @@ func (p *Parser) parseIfElse() AST {
 			astBlock,
 			falseBody,
 		},
+		elifBody,
 	}
 }

@@ -58,6 +58,12 @@ type VariableAST struct {
 	Name string
 }
 
+type ElifAST struct {
+	position
+	kind
+	Condition AST
+	Body 	  BlockAST
+}
 
 type IfElseAST struct {
 	position
@@ -65,6 +71,7 @@ type IfElseAST struct {
 	Condition AST
 	TrueBody  BlockAST
 	FalseBody BlockAST
+	ElifBody  []ElifAST
 }
 
 type CallAST struct {

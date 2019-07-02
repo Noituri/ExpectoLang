@@ -19,6 +19,7 @@ const (
 	TokRParen   // )
 	TokIf		// If
 	TokElse		// If else
+	TokElif		// if else if (elif)
 	TokUnknown  // Not specified type
 )
 
@@ -106,6 +107,12 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 
 		if l.Identifier == "else" {
 			l.CurrentToken.kind = TokElse
+			l.CurrentToken.val = -1
+			return true
+		}
+
+		if l.Identifier == "elif" {
+			l.CurrentToken.kind = TokElif
 			l.CurrentToken.val = -1
 			return true
 		}

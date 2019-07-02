@@ -1,6 +1,12 @@
 @printf(x)
 
+fc call()
+    printf("that's it\n")
+    0
+end
+
 fc main(): float
-    printf("I'm done")
+    call()
+    printf("I'm done\n")
     3 + 2 + (2 + 2)
 end
