@@ -40,7 +40,7 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 	argsNames := []ArgsPrototype{}
 
 	p.lexer.NextToken()
-	for ; ; {
+	for ;; {
 		if p.lexer.CurrentToken.kind == TokIdentifier {
 			name := p.lexer.Identifier
 			if callee {
@@ -297,19 +297,21 @@ func (p *Parser) parseIdentifier() AST {
 	args := []AST{}
 
 	for ; p.lexer.CurrentToken.kind != TokRParen; {
-		arg := p.ParseExpression()
-		if arg == nil {
-			return nil
+		if p.lexer.CurrentToken.kind == TokEOF {
+			panic("Syntax Error: Function call is not closed")
 		}
 
-		args = append(args, arg)
+		arg := p.ParseExpression()
+		if arg != nil {
+			args = append(args, arg)
+		}
 
 		if p.lexer.CurrentToken.kind == TokRParen {
 			break
 		}
 
 		if p.lexer.CurrentToken.val != ',' {
-			return nil
+			panic("Syntax Error: Invalid character")
 		}
 
 		p.lexer.NextToken()
