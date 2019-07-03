@@ -1,4 +1,5 @@
 # ExpectoLang
+Language grammar: [here](https://github.com/Noituri/ExpectoLang/blob/master/grammar.md)
 
 ## Building
 - `git clone --recurse-submodules https://github.com/Noituri/ExpectoLang.git`
