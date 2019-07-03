@@ -2,26 +2,21 @@
 
 fc call()
     printf("that's it\n")
-    0
+    return 0
 end
 
 fc main(): float
     call()
     printf("I'm done\n")
 
-    if 1
-        printf("true")
-    elif 30
-        printf("elif")
-    elif 25
-        printf("elif")
-    elif 30
-        printf("elif")
-    elif 25
-        printf("elif")
+    if 0
+        printf("Hi")
+    elif 1
+        printf("hello")
     else
-        printf("false")
+        printf("test")
+        return 33
     end
-
-    3 + 2 + (2 + 2)
+    printf("\n")
+    return 12
 end

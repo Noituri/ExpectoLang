@@ -14,6 +14,7 @@ const (
 	astBlock
 	astPrototype
 	astIfElse
+	astReturn
 )
 
 type AST interface {
@@ -79,6 +80,12 @@ type CallAST struct {
 	kind
 	Callee string
 	args   []AST
+}
+
+type ReturnAST struct {
+	 position
+	 kind
+	 Body AST
 }
 
 type BlockAST struct {

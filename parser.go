@@ -253,6 +253,8 @@ func (p *Parser) ParsePrimary() AST {
 		return p.parseParen()
 	case TokIf:
 		return p.parseIfElse()
+	case TokReturn:
+		return p.parseReturn()
 	case TokFunction:
 		panic("Syntax Error: Cannot define function here")
 	case TokEnd:
@@ -431,5 +433,18 @@ func (p *Parser) parseIfElse() AST {
 			falseBody,
 		},
 		elifBody,
+	}
+}
+
+// TODO return might be void
+func (p *Parser) parseReturn() AST {
+	pos := p.lexer.CurrentChar
+	p.lexer.NextToken()
+	value := p.ParseExpression()
+
+	return &ReturnAST{
+		position(pos),
+		astReturn,
+		value,
 	}
 }

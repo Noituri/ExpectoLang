@@ -156,15 +156,21 @@ func (p *PrototypeAST) codegen() llvm.Value {
 	return fc
 }
 
-func (b *BlockAST) codegen() []llvm.Value {
+func (b *BlockAST) codegen() ([]llvm.Value, bool) {
 	elements := []llvm.Value{}
+	isReturn := false
 	for _, stmt := range b.Elements {
 		elements = append(elements, stmt.codegen())
+		if stmt.Kind() == astReturn {
+			isReturn = true
+			break
+		}
 	}
-	return elements
+	return elements, isReturn
 }
 
 // TODO Check for redefinition
+// TODO Check if function has return
 func (p *FunctionAST) codegen() llvm.Value {
 	proc := module.NamedFunction(p.Proto.Name)
 
@@ -184,15 +190,7 @@ func (p *FunctionAST) codegen() llvm.Value {
 		namedValues[param.Name()] = param
 	}
 
-	elements := p.Body.codegen()
-
-	retVal := elements[len(p.Body.Elements)-1]
-
-	if retVal.IsNil() {
-		panic(fmt.Sprintf(`No return in procedure "%s"`, p.Proto.Name))
-	}
-
-	builder.CreateRet(retVal)
+	p.Body.codegen()
 
 	if llvm.VerifyFunction(proc, llvm.PrintMessageAction) != nil {
 		proc.EraseFromParentAsFunction()
@@ -221,8 +219,11 @@ func (i *IfElseAST) codegen() llvm.Value {
 
 	// build then body
 	builder.SetInsertPointAtEnd(thenBlock)
-	i.TrueBody.codegen()
-	builder.CreateBr(exitBlock)
+	_, isRet := i.TrueBody.codegen()
+
+	if !isRet {
+		builder.CreateBr(exitBlock)
+	}
 
 	// build elifs body
 	for ind, el := range i.ElifBody {
@@ -247,8 +248,11 @@ func (i *IfElseAST) codegen() llvm.Value {
 		}
 
 		builder.SetInsertPointAtEnd(elifThenBlock)
-		el.Body.codegen()
-		builder.CreateBr(exitBlock)
+		_, isRet := el.Body.codegen()
+
+		if !isRet {
+			builder.CreateBr(exitBlock)
+		}
 
 		builder.SetInsertPointAtEnd(elifElseBlock)
 		if ind == len(i.ElifBody) - 1 {
@@ -258,10 +262,18 @@ func (i *IfElseAST) codegen() llvm.Value {
 
 	// build else body
 	builder.SetInsertPointAtEnd(elseBlock)
-	i.FalseBody.codegen()
-	builder.CreateBr(exitBlock)
+	_, isRet = i.FalseBody.codegen()
+
+	if !isRet {
+		builder.CreateBr(exitBlock)
+	}
 
 	builder.SetInsertPointAtEnd(exitBlock)
 
 	return cond
+}
+
+// TODO return might return void
+func (r *ReturnAST) codegen() llvm.Value {
+	return builder.CreateRet(r.Body.codegen())
 }

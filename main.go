@@ -37,7 +37,6 @@ func handleExtern(parser *Parser) {
 }
 
 func handleTopLevelExpression(parser *Parser) {
-	//println(parser.lexer.CurrentToken.kind, parser.lexer.CurrentChar)
 	topAST, err := parser.ParseTopLevelExpr()
 
 	if err != nil {
