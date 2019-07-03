@@ -200,7 +200,7 @@ func (p *FunctionAST) codegen() llvm.Value {
 		panic(fmt.Sprintf(`Error occurred while verifing procedure "%s"`, p.Proto.Name))
 	}
 
-	//fcPassManager.RunFunc(proc)
+	fcPassManager.RunFunc(proc)
 
 	return proc
 }
@@ -234,32 +234,50 @@ func (i *IfElseAST) codegen() llvm.Value {
 	builder.CreateBr(exitBlock)
 	thenBlock = builder.GetInsertBlock()
 
-	if len(i.ElifBody) != 0 {
-		builder.SetInsertPointAtEnd(elseBlock)
+	for ind, el := range i.ElifBody {
+		if ind == 0 {
+			builder.SetInsertPointAtEnd(elseBlock)
+			elseBlock = llvm.AddBasicBlock(fc, "else")
+		}
+
 		elifThenBlock := llvm.AddBasicBlock(fc, "then")
 		elifElseBlock := llvm.AddBasicBlock(fc, "else")
-		builder.CreateCondBr(cond, elifThenBlock, elifElseBlock)
-		elseBlock = llvm.AddBasicBlock(fc, "else")
+
+		elifCond := el.Condition.codegen()
+		if elifCond.IsNil() {
+			panic("No condition in elif")
+		}
+
+		elifCond = builder.CreateFCmp(llvm.FloatONE, elifCond, llvm.ConstFloat(llvm.FloatType(), 0), "cond")
+		if ind == len(i.ElifBody) - 1 {
+			builder.CreateCondBr(elifCond, elifThenBlock, elseBlock)
+		} else {
+			builder.CreateCondBr(elifCond, elifThenBlock, elifElseBlock)
+		}
+
 		builder.SetInsertPointAtEnd(elifThenBlock)
+		el.Body.codegen()
 		builder.CreateBr(exitBlock)
 
 		builder.SetInsertPointAtEnd(elifElseBlock)
-		builder.CreateBr(exitBlock)
+		if ind == len(i.ElifBody) - 1 {
+			builder.CreateBr(exitBlock)
+		}
 	}
 
 	builder.SetInsertPointAtEnd(elseBlock)
 
-	//elseVals := []llvm.Value{}
-	//for _, v := range i.FalseBody.Elements {
-	//	val := v.codegen()
-	//	if val.IsNil() {
-	//		panic("Could not codegen body of the if cond")
-	//	}
-	//	elseVals = append(elseVals, val)
-	//}
-	//
+	elseVals := []llvm.Value{}
+	for _, v := range i.FalseBody.Elements {
+		val := v.codegen()
+		if val.IsNil() {
+			panic("Could not codegen body of the if cond")
+		}
+		elseVals = append(elseVals, val)
+	}
+
 	builder.CreateBr(exitBlock)
-	//elseBlock = builder.GetInsertBlock()
+	elseBlock = builder.GetInsertBlock()
 
 	builder.SetInsertPointAtEnd(exitBlock)
 

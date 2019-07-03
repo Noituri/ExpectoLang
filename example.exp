@@ -13,6 +13,12 @@ fc main(): float
         printf("true")
     elif 30
         printf("elif")
+    elif 25
+        printf("elif")
+    elif 30
+        printf("elif")
+    elif 25
+        printf("elif")
     else
         printf("false")
     end
