@@ -156,7 +156,6 @@ func (p *PrototypeAST) codegen() llvm.Value {
 	return fc
 }
 
-// TODO use this to generate body
 func (b *BlockAST) codegen() []llvm.Value {
 	elements := []llvm.Value{}
 	for _, stmt := range b.Elements {
@@ -219,21 +218,13 @@ func (i *IfElseAST) codegen() llvm.Value {
 	exitBlock := llvm.AddBasicBlock(fc, "exit")
 
 	builder.CreateCondBr(cond, thenBlock, elseBlock)
+
+	// build then body
 	builder.SetInsertPointAtEnd(thenBlock)
-
-	// @todo use BlockAST.codegen()
-	thenVals := []llvm.Value{}
-	for _, v := range i.TrueBody.Elements {
-		val := v.codegen()
-		if val.IsNil() {
-			panic("Could not codegen body of the if cond")
-		}
-		thenVals = append(thenVals, val)
-	}
-
+	i.TrueBody.codegen()
 	builder.CreateBr(exitBlock)
-	thenBlock = builder.GetInsertBlock()
 
+	// build elifs body
 	for ind, el := range i.ElifBody {
 		if ind == 0 {
 			builder.SetInsertPointAtEnd(elseBlock)
@@ -265,19 +256,10 @@ func (i *IfElseAST) codegen() llvm.Value {
 		}
 	}
 
+	// build else body
 	builder.SetInsertPointAtEnd(elseBlock)
-
-	elseVals := []llvm.Value{}
-	for _, v := range i.FalseBody.Elements {
-		val := v.codegen()
-		if val.IsNil() {
-			panic("Could not codegen body of the if cond")
-		}
-		elseVals = append(elseVals, val)
-	}
-
+	i.FalseBody.codegen()
 	builder.CreateBr(exitBlock)
-	elseBlock = builder.GetInsertBlock()
 
 	builder.SetInsertPointAtEnd(exitBlock)
 
