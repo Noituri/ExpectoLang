@@ -100,6 +100,7 @@ func main() {
 			Source:      string(dat),
 			CurrentChar: -1,
 			LastChar:    32,
+			ignoreNewLine: true,
 		},
 		binOpPrecedence: map[string]int{
 			"<": 10,

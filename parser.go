@@ -13,7 +13,7 @@ type Parser struct {
 func (p *Parser) getType(t string) string {
 	switch t {
 	case LitVoid:
-		panic("NOT IMPLEMENTED")
+		return LitVoid
 	case LitFloat:
 		return LitFloat
 	case LitString:
@@ -134,6 +134,14 @@ func (p *Parser) ParseFunction() (FunctionAST, error) {
 		if expr != nil {
 			body = append(body, expr)
 		}
+	}
+
+	if proto.ReturnType == LitVoid {
+		body = append(body, &ReturnAST{
+			position(pos),
+			astReturn,
+			nil,
+		})
 	}
 
 	p.lexer.NextToken()
@@ -439,9 +447,19 @@ func (p *Parser) parseIfElse() AST {
 // TODO return might be void
 func (p *Parser) parseReturn() AST {
 	pos := p.lexer.CurrentChar
+	p.lexer.ignoreNewLine = false
 	p.lexer.NextToken()
-	value := p.ParseExpression()
+	p.lexer.ignoreNewLine = true
 
+	if p.lexer.CurrentToken.val == 10 || p.lexer.CurrentToken.val == 13 {
+		return &ReturnAST{
+			position(pos),
+			astReturn,
+			nil,
+		}
+	}
+
+	value := p.ParseExpression()
 	return &ReturnAST{
 		position(pos),
 		astReturn,

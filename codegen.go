@@ -116,7 +116,7 @@ func (c *CallAST) codegen() llvm.Value {
 		argsValues = append(argsValues, argVal)
 	}
 
-	return builder.CreateCall(callee, argsValues, "calltmp")
+	return builder.CreateCall(callee, argsValues, "")
 }
 
 func (p *PrototypeAST) codegen() llvm.Value {
@@ -140,11 +140,13 @@ func (p *PrototypeAST) codegen() llvm.Value {
 		fcType = llvm.FunctionType(llvm.FloatType(), args, false)
 	case LitString:
 		fcType = llvm.FunctionType(llvm.PointerType(llvm.Int8Type(), 0), args, false)
+	case LitVoid:
+		fcType = llvm.FunctionType(llvm.VoidType(), args, false)
 	default:
 		// TODO DEBUG
-		fcType = llvm.FunctionType(llvm.FloatType(), args, false)
+		//fcType = llvm.FunctionType(llvm.FloatType(), args, false)
 		//fcType = llvm.FunctionType(llvm.Int32Type(), args, false)
-		//panic(fmt.Sprintf("type-%s-does-no-exit", p.ReturnType))
+		panic(fmt.Sprintf("type-%s-does-no-exit", p.ReturnType))
 	}
 
 	fc := llvm.AddFunction(module, p.Name, fcType)
@@ -179,7 +181,7 @@ func (p *FunctionAST) codegen() llvm.Value {
 	}
 
 	if proc.IsNil() {
-		panic(fmt.Sprintf(`Could not create procedure "%s"`, p.Proto.Name))
+		panic(fmt.Sprintf(`Could not create function "%s"`, p.Proto.Name))
 	}
 	block := llvm.AddBasicBlock(proc, "entry")
 	builder.SetInsertPointAtEnd(block)
@@ -194,7 +196,7 @@ func (p *FunctionAST) codegen() llvm.Value {
 
 	if llvm.VerifyFunction(proc, llvm.PrintMessageAction) != nil {
 		proc.EraseFromParentAsFunction()
-		panic(fmt.Sprintf(`Error occurred while verifing procedure "%s"`, p.Proto.Name))
+		panic(fmt.Sprintf(`Error occurred while verifing function "%s"`, p.Proto.Name))
 	}
 
 	fcPassManager.RunFunc(proc)
@@ -275,5 +277,8 @@ func (i *IfElseAST) codegen() llvm.Value {
 
 // TODO return might return void
 func (r *ReturnAST) codegen() llvm.Value {
+	if r.Body == nil {
+		return builder.CreateRetVoid()
+	}
 	return builder.CreateRet(r.Body.codegen())
 }

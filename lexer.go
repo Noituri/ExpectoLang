@@ -31,14 +31,15 @@ type Token struct {
 }
 
 type Lexer struct {
-	Source       string
-	CurrentToken Token
-	Identifier   string
-	numVal       float64
-	strVal		 string
-	CurrentChar  int
-	LastChar     uint8
-	isEOF        bool
+	Source        string
+	CurrentToken  Token
+	Identifier    string
+	numVal        float64
+	strVal		  string
+	CurrentChar   int
+	LastChar      uint8
+	isEOF         bool
+	ignoreNewLine bool
 }
 
 func (l *Lexer) nextChar() error {
@@ -52,7 +53,7 @@ func (l *Lexer) nextChar() error {
 }
 
 func (l *Lexer) removeSpace() (stopLexing bool) {
-	for l.LastChar == 32 || l.LastChar == 10 || l.LastChar == 13 || l.LastChar == '\t' {
+	for l.LastChar == 32 || ((l.LastChar == 10 || l.LastChar == 13) && l.ignoreNewLine) || l.LastChar == '\t' {
 		if l.nextChar() != nil {
 			l.CurrentToken.kind = TokEOF
 			l.CurrentToken.val = -1

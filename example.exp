@@ -1,22 +1,9 @@
-@printf(x)
+@printf(x): float
 
 fc call()
     printf("that's it\n")
-    return 0
 end
 
-fc main(): float
+fc main()
     call()
-    printf("I'm done\n")
-
-    if 0
-        printf("Hi")
-    elif 1
-        printf("hello")
-    else
-        printf("test")
-        return 33
-    end
-    printf("\n")
-    return 12
 end
