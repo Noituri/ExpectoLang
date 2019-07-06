@@ -20,6 +20,8 @@ const (
 	TokIf		// If
 	TokElse		// If else
 	TokElif		// if else if (elif)
+	TokLoop		// for/while/foreach loop
+	TokIn		// loop - element in array
 	TokEqual    // ==
 	TokAssign   // =
 	TokUnknown  // Not specified type
@@ -116,6 +118,18 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 
 		if l.Identifier == "elif" {
 			l.CurrentToken.kind = TokElif
+			l.CurrentToken.val = -1
+			return true
+		}
+
+		if l.Identifier == "loop" {
+			l.CurrentToken.kind = TokLoop
+			l.CurrentToken.val = -1
+			return true
+		}
+
+		if l.Identifier == "in" {
+			l.CurrentToken.kind = TokIn
 			l.CurrentToken.val = -1
 			return true
 		}

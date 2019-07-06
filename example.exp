@@ -22,5 +22,9 @@ fc main()
     else
         printf("NAY\n")
     end
+
+    loop i, v in "SOMEarray"
+        printf(v)
+    end
     call()
 end

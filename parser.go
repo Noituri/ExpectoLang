@@ -280,6 +280,10 @@ func (p *Parser) ParsePrimary() AST {
 		return p.parseIfElse()
 	case TokReturn:
 		return p.parseReturn()
+	case TokLoop:
+		return p.parseLoop()
+	case TokIn:
+		panic("Syntax Error: Invalid 'in' keyword usage")
 	case TokFunction:
 		panic("Syntax Error: Cannot define function here")
 	case TokEnd:
@@ -461,7 +465,6 @@ func (p *Parser) parseIfElse() AST {
 	}
 }
 
-// TODO return might be void
 func (p *Parser) parseReturn() AST {
 	pos := p.lexer.CurrentChar
 	p.lexer.ignoreNewLine = false
@@ -481,5 +484,60 @@ func (p *Parser) parseReturn() AST {
 		position(pos),
 		astReturn,
 		value,
+	}
+}
+
+func (p *Parser) parseLoop() AST {
+	pos := p.lexer.CurrentChar
+
+	p.lexer.NextToken()
+	if p.lexer.CurrentToken.kind != TokIdentifier {
+		panic("Syntax Error: No index variable in the loop")
+	}
+
+	p.lexer.NextToken()
+	if p.lexer.CurrentToken.val != ',' {
+		panic("Syntax Error: No comma in the loop")
+	}
+
+	p.lexer.NextToken()
+	if p.lexer.CurrentToken.kind != TokIdentifier {
+		panic("Syntax Error: No variable in the loop")
+	}
+
+	p.lexer.NextToken()
+	if p.lexer.CurrentToken.kind != TokIn {
+		panic("Syntax Error: No `in` keyword in the loop")
+	}
+
+	p.lexer.NextToken()
+	cond := p.ParseExpression()
+	if cond == nil {
+		panic("Syntax Error: No condition after 'in' keyword")
+	}
+
+	p.lexer.NextToken()
+	body := []AST{}
+	for ; p.lexer.CurrentToken.kind != TokEnd; {
+		if p.lexer.CurrentToken.kind == TokEOF {
+			panic("Syntax Error: Loop has no end")
+		}
+
+		expr := p.ParseExpression()
+
+		if expr != nil {
+			body = append(body, expr)
+		}
+	}
+
+	return &LoopAST{
+		position(pos),
+		astLoop,
+		cond,
+		BlockAST{
+			position(pos),
+			astBlock,
+			body,
+		},
 	}
 }

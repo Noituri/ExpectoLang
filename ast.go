@@ -15,6 +15,7 @@ const (
 	astPrototype
 	astIfElse
 	astReturn
+	astLoop
 )
 
 type AST interface {
@@ -73,6 +74,13 @@ type IfElseAST struct {
 	TrueBody  BlockAST
 	FalseBody BlockAST
 	ElifBody  []ElifAST
+}
+
+type LoopAST struct {
+	position
+	kind
+	Condition AST
+	Body 	  BlockAST
 }
 
 type CallAST struct {

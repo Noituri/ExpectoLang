@@ -3,6 +3,7 @@ package main
 import (
 	"ExpectoLang/llvm/bindings/go/llvm"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -204,7 +205,9 @@ func (p *FunctionAST) codegen() llvm.Value {
 		panic(fmt.Sprintf(`Error occurred while verifing function "%s"`, p.Proto.Name))
 	}
 
-	//fcPassManager.RunFunc(proc)
+	if os.Getenv("DEBUG") != "true" {
+		fcPassManager.RunFunc(proc)
+	}
 
 	return proc
 }
@@ -278,10 +281,14 @@ func (i *IfElseAST) codegen() llvm.Value {
 	return cond
 }
 
-// TODO return might return void
 func (r *ReturnAST) codegen() llvm.Value {
 	if r.Body == nil {
 		return builder.CreateRetVoid()
 	}
 	return builder.CreateRet(r.Body.codegen())
+}
+
+func (l *LoopAST) codegen() llvm.Value {
+	println("LOOP")
+	return llvm.Value{}
 }
