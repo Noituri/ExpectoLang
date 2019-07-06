@@ -20,6 +20,8 @@ const (
 	TokIf		// If
 	TokElse		// If else
 	TokElif		// if else if (elif)
+	TokEqual    // ==
+	TokAssign   // =
 	TokUnknown  // Not specified type
 )
 
@@ -271,6 +273,30 @@ func (l *Lexer) isStr() (stopLexing bool) {
 	return false
 }
 
+func (l *Lexer) isEqual() (stopLexing bool) {
+	if l.LastChar == '=' {
+		if l.nextChar() != nil {
+			l.CurrentToken.kind = TokEOF
+			l.CurrentToken.val = -1
+			return true
+		}
+
+		if l.LastChar != '=' {
+			l.isEOF = l.nextChar() != nil
+			l.CurrentToken.kind = TokAssign
+			l.CurrentToken.val = -1
+			return true
+		}
+
+		l.isEOF = l.nextChar() != nil
+		l.CurrentToken.kind = TokEqual
+		l.CurrentToken.val = -1
+		return true
+	}
+
+	return false
+}
+
 func (l *Lexer) NextToken() {
 	if l.isEOF {
 		l.CurrentToken.kind = TokEOF
@@ -295,6 +321,10 @@ func (l *Lexer) NextToken() {
 	}
 
 	if l.isDigit() {
+		return
+	}
+
+	if l.isEqual() {
 		return
 	}
 

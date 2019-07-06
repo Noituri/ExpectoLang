@@ -207,10 +207,25 @@ func (p *Parser) ParseExpression() AST {
 	return p.ParseBinOpRHS(0, lhs)
 }
 
+func (p *Parser) checkBinOpPrec() (int, bool, string) {
+	switch p.lexer.CurrentToken.kind {
+	case TokAssign:
+		prec, ok := p.binOpPrecedence["="]
+		return prec, ok, "="
+	case TokEqual:
+		prec, ok := p.binOpPrecedence["=="]
+		return prec, ok, "=="
+	default:
+		val := string(rune(p.lexer.CurrentToken.val))
+		prec, ok := p.binOpPrecedence[val]
+		return prec, ok, val
+	}
+}
+
 func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 	pos := p.lexer.CurrentChar
-	for ; ; {
-		tokenPrec, ok := p.binOpPrecedence[string(rune(p.lexer.CurrentToken.val))]
+	for ;; {
+		tokenPrec, ok, binop := p.checkBinOpPrec()
 
 		if !ok {
 			tokenPrec = -1
@@ -220,7 +235,6 @@ func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 			return lhs
 		}
 
-		binop := p.lexer.CurrentToken.val
 		p.lexer.NextToken()
 
 		rhs := p.ParsePrimary()
@@ -229,7 +243,7 @@ func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 			return nil
 		}
 
-		nextPrec, ok := p.binOpPrecedence[string(rune(p.lexer.CurrentToken.val))]
+		nextPrec, ok, _ := p.checkBinOpPrec()
 
 		if !ok {
 			tokenPrec = -1
@@ -245,7 +259,7 @@ func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 		lhs = &BinaryAST{
 			position(pos),
 			astBinary,
-			rune(binop),
+			binop,
 			lhs,
 			rhs,
 		}
@@ -273,6 +287,7 @@ func (p *Parser) ParsePrimary() AST {
 	case TokRParen:
 		panic("Syntax Error: Invalid use of ')'")
 	default:
+		println("NUL", p.lexer.CurrentToken.kind, string(rune(p.lexer.CurrentToken.val)))
 		p.lexer.NextToken()
 		return nil
 	}

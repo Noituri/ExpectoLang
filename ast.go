@@ -43,7 +43,7 @@ type NumberLiteralAST struct {
 type BinaryAST struct {
 	position
 	kind
-	Op       rune
+	Op       string
 	Lhs, Rhs AST
 }
 

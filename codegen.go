@@ -49,18 +49,19 @@ func (b *BinaryAST) numberCodegen() llvm.Value {
 	}
 
 	switch b.Op {
-	case '+':
+	case "+":
 		return builder.CreateFAdd(l, r, "addtmp")
-	case '-':
+	case "-":
 		return builder.CreateFSub(l, r, "subtmp")
-	case '*':
+	case "*":
 		return builder.CreateFMul(l, r, "multmo")
-	case '/':
+	case "/":
 		// TODO check if r is not 0
 		return builder.CreateFDiv(l, r, "divtmp")
-	case '<':
-		builder.CreateFCmp(llvm.FloatOLT, l, r, "cmptmp")
-		return builder.CreateUIToFP(l, llvm.FloatType(), "booltmp")
+	case "<":
+		return builder.CreateFCmp(llvm.FloatOLT, l, r, "cmptmp")
+	case "==":
+		return builder.CreateFCmp(llvm.FloatOEQ, l, r, "cmptmp")
 	default:
 		panic(fmt.Sprintf(`Operator "%c" is invalid`, b.Op))
 	}
@@ -75,9 +76,13 @@ func (b *BinaryAST) strCodegen() llvm.Value {
 	}
 
 	switch b.Op {
-	case '+':
+	case "+":
 		// Todo figure out string concat
 		panic("not implemented: String Concat")
+	case "==":
+		l = builder.CreatePointerCast(l, llvm.Int8Type(), "pointcast")
+		r = builder.CreatePointerCast(r, llvm.Int8Type(), "pointcast")
+		return builder.CreateICmp(llvm.IntEQ, l, r, "cmptmp")
 	default:
 		panic(fmt.Sprintf(`Operator "%c" is invalid`, b.Op))
 	}
@@ -143,7 +148,7 @@ func (p *PrototypeAST) codegen() llvm.Value {
 	case LitVoid:
 		fcType = llvm.FunctionType(llvm.VoidType(), args, false)
 	default:
-		// TODO DEBUG
+		// TODO THIS IS MY DEBUG
 		//fcType = llvm.FunctionType(llvm.FloatType(), args, false)
 		//fcType = llvm.FunctionType(llvm.Int32Type(), args, false)
 		panic(fmt.Sprintf("type-%s-does-no-exit", p.ReturnType))
@@ -199,7 +204,7 @@ func (p *FunctionAST) codegen() llvm.Value {
 		panic(fmt.Sprintf(`Error occurred while verifing function "%s"`, p.Proto.Name))
 	}
 
-	fcPassManager.RunFunc(proc)
+	//fcPassManager.RunFunc(proc)
 
 	return proc
 }
@@ -209,8 +214,6 @@ func (i *IfElseAST) codegen() llvm.Value {
 	if cond.IsNil() {
 		panic("No condition")
 	}
-
-	cond = builder.CreateFCmp(llvm.FloatONE, cond, llvm.ConstFloat(llvm.FloatType(), 0), "cond")
 
 	fc := builder.GetInsertBlock().Parent()
 	thenBlock := llvm.AddBasicBlock(fc, "then")
