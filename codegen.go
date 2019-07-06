@@ -98,11 +98,11 @@ func (c *CallAST) codegen() llvm.Value {
 	callee := module.NamedFunction(c.Callee)
 
 	if callee.IsNil() {
-		panic(fmt.Sprintf(`Procedure "%s" could not be referenced`, c.Callee))
+		panic(fmt.Sprintf(`Function "%s" could not be referenced`, c.Callee))
 	}
 
 	if callee.ParamsCount() != len(c.args) {
-		panic(fmt.Sprintf(`Incorrect arguments passed in procedure "%s"`, c.Callee))
+		panic(fmt.Sprintf(`Incorrect arguments passed in function "%s"`, c.Callee))
 	}
 
 	argsValues := []llvm.Value{}
@@ -110,7 +110,7 @@ func (c *CallAST) codegen() llvm.Value {
 	for _, arg := range c.args {
 		argVal := arg.codegen()
 		if argVal.IsNil() {
-			panic(fmt.Sprintf(`One of the arguments in procedure "%s" was null`, c.Callee))
+			panic(fmt.Sprintf(`One of the arguments in function "%s" was null`, c.Callee))
 		}
 
 		argsValues = append(argsValues, argVal)

@@ -1,6 +1,6 @@
 @printf(x): float
 
-fc call()
+fc call
     printf("that's it\n")
 end
 

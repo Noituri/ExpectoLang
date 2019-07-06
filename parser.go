@@ -23,20 +23,7 @@ func (p *Parser) getType(t string) string {
 	}
 }
 
-func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
-	pos := p.lexer.CurrentChar
-
-	if p.lexer.CurrentToken.kind != TokIdentifier {
-		return PrototypeAST{}, errors.New("no-function-name")
-	}
-
-	funcName := p.lexer.Identifier
-	p.lexer.NextToken()
-
-	if p.lexer.CurrentToken.kind != TokLParen {
-		return PrototypeAST{}, errors.New("(-expected")
-	}
-
+func (p *Parser) parseArgs(callee bool) []ArgsPrototype {
 	argsNames := []ArgsPrototype{}
 
 	p.lexer.NextToken()
@@ -52,7 +39,7 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 				p.lexer.NextToken()
 
 				if p.lexer.CurrentToken.val != ':' {
-					return PrototypeAST{}, errors.New("wrong-args-definition")
+					panic("wrong-args-definition")
 				}
 
 				p.lexer.NextToken()
@@ -66,18 +53,18 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 			if len(argsNames) == 0 {
 				break
 			} else {
-				return PrototypeAST{}, errors.New("wrong-args-definition")
+				panic("wrong-args-definition")
 			}
 		} else {
 			if !callee {
-				return PrototypeAST{}, errors.New("wrong-args-definition")
+				panic("wrong-args-definition")
 			}
 		}
 
 		p.lexer.NextToken()
 		if p.lexer.CurrentToken.val != ',' {
 			if p.lexer.CurrentToken.kind != TokRParen {
-				return PrototypeAST{}, errors.New("wrong-args-definition")
+				panic("wrong-args-definition")
 			}
 
 			break
@@ -85,14 +72,29 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 		p.lexer.NextToken()
 	}
 
-	if p.lexer.CurrentToken.kind != TokRParen {
-		return PrototypeAST{}, errors.New(")-expected")
+	return argsNames
+}
+
+func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
+	pos := p.lexer.CurrentChar
+
+	if p.lexer.CurrentToken.kind != TokIdentifier {
+		return PrototypeAST{}, errors.New("no-function-name")
 	}
 
+	funcName := p.lexer.Identifier
 	p.lexer.NextToken()
 
-	returnType := LitVoid
+	argsNames := []ArgsPrototype{}
+	if p.lexer.CurrentToken.kind == TokLParen {
+		argsNames = p.parseArgs(callee)
+		if p.lexer.CurrentToken.kind != TokRParen {
+			return PrototypeAST{}, errors.New(")-expected")
+		}
+		p.lexer.NextToken()
+	}
 
+	returnType := LitVoid
 	if p.lexer.CurrentToken.val == ':' {
 		p.lexer.NextToken()
 
@@ -101,6 +103,7 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 		}
 
 		returnType = p.getType(p.lexer.Identifier)
+
 		p.lexer.NextToken()
 	}
 
@@ -270,7 +273,6 @@ func (p *Parser) ParsePrimary() AST {
 	case TokRParen:
 		panic("Syntax Error: Invalid use of ')'")
 	default:
-		println(p.lexer.CurrentToken.kind)
 		p.lexer.NextToken()
 		return nil
 	}
