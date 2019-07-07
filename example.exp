@@ -9,7 +9,7 @@ fc sum(a: float, b: float): float
 end
 
 fc main()
-    loop i, v in "SOMEarray"
+    loop i, v in "IterThroughMe"
         printf(v)
         printf("\n")
     end

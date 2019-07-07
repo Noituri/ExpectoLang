@@ -20,6 +20,7 @@ func InitModuleAndPassManager() {
 	fcPassManager.AddInstructionCombiningPass()
 	fcPassManager.AddGVNPass()
 	fcPassManager.AddCFGSimplificationPass()
+	fcPassManager.AddLoopUnswitchPass()
 	fcPassManager.InitializeFunc()
 }
 
@@ -293,6 +294,7 @@ func (l *LoopAST) codegen() llvm.Value {
 		panic("No condition in the loop")
 	}
 
+	charAlloca := builder.CreateArrayAlloca(llvm.Int8Type(), llvm.ConstInt(llvm.Int32Type(), 1, false), "")
 	fc := builder.GetInsertBlock().Parent()
 	headerBlock := builder.GetInsertBlock()
 	loopBlock := llvm.AddBasicBlock(fc, "loop")
@@ -307,13 +309,21 @@ func (l *LoopAST) codegen() llvm.Value {
 
 	oldValElem, okElem := namedValues[l.ElementVar]
 	// TODO use store & alloc in the loop
-	namedValues[l.ElementVar] = llvm.ConstInBoundsGEP(cond, []llvm.Value{valInd.IncomingValue(0)})
+	gep := llvm.ConstGEP(cond, []llvm.Value{valInd.IncomingValue(0)})
+	condAlloca := builder.CreateAlloca(gep.Type(), "")
+	builder.CreateStore(gep, condAlloca)
+	load := builder.CreateLoad(condAlloca, "load")
+	gep2 := builder.CreateInBoundsGEP(load, []llvm.Value{valInd.IncomingValue(0)}, "")
+	load2 := builder.CreateLoad(gep2, "load")
+	builder.CreateStore(load2, charAlloca)
+	namedValues[l.ElementVar] = charAlloca
+	//namedValues[l.ElementVar] = builder.loa
 
 	// TODO Check if loop's body does not have return inside
 	l.Body.codegen()
-	nextInd := builder.CreateAdd(valInd, llvm.ConstInt(llvm.Int32Type(), 1, false), "nextind")
 
-	breakCond := builder.CreateICmp(llvm.IntNE, llvm.ConstInt(llvm.Int32Type(), 5, false), nextInd, "loopcond")
+	nextInd := builder.CreateAdd(valInd, llvm.ConstInt(llvm.Int32Type(), 1, false), "nextind")
+	breakCond := builder.CreateICmp(llvm.IntNE, llvm.ConstInt(llvm.Int32Type(), uint64(cond.Operand(0).Operand(0).Type().ArrayLength()), false), nextInd, "loopcond")
 
 	loopExitBlock := builder.GetInsertBlock()
 	exitBlock := llvm.AddBasicBlock(fc, "exitloop")

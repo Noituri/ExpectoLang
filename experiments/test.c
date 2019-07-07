@@ -20,7 +20,10 @@
 //}
 
 int main() {
-    int test[2];
-    test[1] = 3;
+    char* test = "HELLO";
+    for (int i = 0; i < 5; i++) {
+        char c = test[0];
+        printf(&c);
+    }
     return 0;
 }
