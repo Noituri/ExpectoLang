@@ -45,7 +45,6 @@ func handleTopLevelExpression(parser *Parser) {
 	}
 
 	topIR := topAST.codegen()
-
 	if topIR.IsNil() {
 		panic("Top Level Expression CodeGen Error: Could not create IR")
 		return

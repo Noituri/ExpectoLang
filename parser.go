@@ -494,6 +494,7 @@ func (p *Parser) parseLoop() AST {
 	if p.lexer.CurrentToken.kind != TokIdentifier {
 		panic("Syntax Error: No index variable in the loop")
 	}
+	ind := p.lexer.Identifier
 
 	p.lexer.NextToken()
 	if p.lexer.CurrentToken.val != ',' {
@@ -504,6 +505,7 @@ func (p *Parser) parseLoop() AST {
 	if p.lexer.CurrentToken.kind != TokIdentifier {
 		panic("Syntax Error: No variable in the loop")
 	}
+	element := p.lexer.Identifier
 
 	p.lexer.NextToken()
 	if p.lexer.CurrentToken.kind != TokIn {
@@ -516,7 +518,6 @@ func (p *Parser) parseLoop() AST {
 		panic("Syntax Error: No condition after 'in' keyword")
 	}
 
-	p.lexer.NextToken()
 	body := []AST{}
 	for ; p.lexer.CurrentToken.kind != TokEnd; {
 		if p.lexer.CurrentToken.kind == TokEOF {
@@ -530,10 +531,14 @@ func (p *Parser) parseLoop() AST {
 		}
 	}
 
+	p.lexer.NextToken()
+
 	return &LoopAST{
 		position(pos),
 		astLoop,
 		cond,
+		ind,
+		element,
 		BlockAST{
 			position(pos),
 			astBlock,

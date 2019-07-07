@@ -9,22 +9,9 @@ fc sum(a: float, b: float): float
 end
 
 fc main()
-/*    if sum(2, 1) == 5
-        printf("true\n")
-    elif sum(2,2) == 5
-        printf("it's 4\n")
-    else
-        printf("false\n")
-    end
-*/
-    if "t" == "t123"
-        printf("YAY\n")
-    else
-        printf("NAY\n")
-    end
-
     loop i, v in "SOMEarray"
         printf(v)
+        printf("\n")
     end
     call()
 end

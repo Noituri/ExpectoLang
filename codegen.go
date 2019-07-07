@@ -248,7 +248,6 @@ func (i *IfElseAST) codegen() llvm.Value {
 			panic("No condition in elif")
 		}
 
-		elifCond = builder.CreateFCmp(llvm.FloatONE, elifCond, llvm.ConstFloat(llvm.FloatType(), 0), "cond")
 		if ind == len(i.ElifBody) - 1 {
 			builder.CreateCondBr(elifCond, elifThenBlock, elseBlock)
 		} else {
@@ -289,6 +288,50 @@ func (r *ReturnAST) codegen() llvm.Value {
 }
 
 func (l *LoopAST) codegen() llvm.Value {
-	println("LOOP")
-	return llvm.Value{}
+	cond := l.Condition.codegen()
+	if cond.IsNil() {
+		panic("No condition in the loop")
+	}
+
+	fc := builder.GetInsertBlock().Parent()
+	headerBlock := builder.GetInsertBlock()
+	loopBlock := llvm.AddBasicBlock(fc, "loop")
+	builder.CreateBr(loopBlock)
+
+	builder.SetInsertPointAtEnd(loopBlock)
+	valInd := builder.CreatePHI(llvm.Int32Type(), "ind")
+	valInd.AddIncoming([]llvm.Value{llvm.ConstInt(llvm.Int32Type(), 0, false)}, []llvm.BasicBlock{headerBlock})
+
+	oldValInd, okInd := namedValues[l.IndexVar]
+	namedValues[l.IndexVar] = valInd
+
+	oldValElem, okElem := namedValues[l.ElementVar]
+	// TODO use store & alloc in the loop
+	namedValues[l.ElementVar] = llvm.ConstInBoundsGEP(cond, []llvm.Value{valInd.IncomingValue(0)})
+
+	// TODO Check if loop's body does not have return inside
+	l.Body.codegen()
+	nextInd := builder.CreateAdd(valInd, llvm.ConstInt(llvm.Int32Type(), 1, false), "nextind")
+
+	breakCond := builder.CreateICmp(llvm.IntNE, llvm.ConstInt(llvm.Int32Type(), 5, false), nextInd, "loopcond")
+
+	loopExitBlock := builder.GetInsertBlock()
+	exitBlock := llvm.AddBasicBlock(fc, "exitloop")
+	builder.CreateCondBr(breakCond, loopBlock, exitBlock)
+	builder.SetInsertPointAtEnd(exitBlock)
+	valInd.AddIncoming([]llvm.Value{nextInd}, []llvm.BasicBlock{loopExitBlock})
+
+	if okInd {
+		namedValues[l.IndexVar] = oldValInd
+	} else {
+		delete(namedValues, l.IndexVar)
+	}
+
+	if okElem {
+		namedValues[l.ElementVar] = oldValElem
+	} else {
+		delete(namedValues, l.ElementVar)
+	}
+
+	return llvm.ConstNull(llvm.Int1Type())
 }

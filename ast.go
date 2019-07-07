@@ -79,8 +79,10 @@ type IfElseAST struct {
 type LoopAST struct {
 	position
 	kind
-	Condition AST
-	Body 	  BlockAST
+	Condition  AST
+	IndexVar   string
+	ElementVar string
+	Body       BlockAST
 }
 
 type CallAST struct {

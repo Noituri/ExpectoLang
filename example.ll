@@ -2,10 +2,8 @@
 source_filename = "expectoroot"
 
 @strtmp = private unnamed_addr constant [11 x i8] c"that's it\0A\00", align 1
-@strtmp.1 = private unnamed_addr constant [2 x i8] c"t\00", align 1
-@strtmp.2 = private unnamed_addr constant [5 x i8] c"t123\00", align 1
-@strtmp.3 = private unnamed_addr constant [5 x i8] c"YAY\0A\00", align 1
-@strtmp.4 = private unnamed_addr constant [5 x i8] c"NAY\0A\00", align 1
+@strtmp.1 = private unnamed_addr constant [10 x i8] c"SOMEarray\00", align 1
+@strtmp.2 = private unnamed_addr constant [2 x i8] c"\0A\00", align 1
 
 declare float @printf(i8* %x)
 
@@ -23,17 +21,17 @@ entry:
 
 define void @main() {
 entry:
-  br i1 icmp eq (i8 ptrtoint ([2 x i8]* @strtmp.1 to i8), i8 ptrtoint ([5 x i8]* @strtmp.2 to i8)), label %then, label %else
+  br label %loop
 
-then:                                             ; preds = %entry
-  %0 = call float @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @strtmp.3, i32 0, i32 0))
-  br label %exit
+loop:                                             ; preds = %loop, %entry
+  %ind = phi i32 [ 0, %entry ], [ %nextind, %loop ]
+  %0 = call float @printf(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @strtmp.1, i32 0, i32 0))
+  %1 = call float @printf(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @strtmp.2, i32 0, i32 0))
+  %nextind = add i32 %ind, 1
+  %loopcond = icmp ne i32 5, %nextind
+  br i1 %loopcond, label %loop, label %exitloop
 
-else:                                             ; preds = %entry
-  %1 = call float @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @strtmp.4, i32 0, i32 0))
-  br label %exit
-
-exit:                                             ; preds = %else, %then
+exitloop:                                         ; preds = %loop
   call void @call()
   ret void
 }
