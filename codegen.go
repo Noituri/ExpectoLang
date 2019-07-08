@@ -293,8 +293,18 @@ func (l *LoopAST) codegen() llvm.Value {
 	if cond.IsNil() {
 		panic("No condition in the loop")
 	}
+	zeroInd := llvm.ConstInt(llvm.Int32Type(), 0, false)
 
-	charAlloca := builder.CreateArrayAlloca(llvm.Int8Type(), llvm.ConstInt(llvm.Int32Type(), 1, false), "")
+	elemAlloca := builder.CreateArrayAlloca(cond.Operand(0).Operand(0).Type().ElementType(), llvm.ConstInt(llvm.Int32Type(), 1, false), "")
+	gep := llvm.ConstGEP(cond, []llvm.Value{zeroInd})
+	condAlloca := builder.CreateAlloca(gep.Type(), "")
+
+	builder.CreateStore(gep, condAlloca)
+	load := builder.CreateLoad(condAlloca, "load")
+	gep2 := builder.CreateInBoundsGEP(load, []llvm.Value{zeroInd}, "")
+	load2 := builder.CreateLoad(gep2, "load")
+	builder.CreateStore(load2, elemAlloca)
+
 	fc := builder.GetInsertBlock().Parent()
 	headerBlock := builder.GetInsertBlock()
 	loopBlock := llvm.AddBasicBlock(fc, "loop")
@@ -308,21 +318,17 @@ func (l *LoopAST) codegen() llvm.Value {
 	namedValues[l.IndexVar] = valInd
 
 	oldValElem, okElem := namedValues[l.ElementVar]
-	// TODO use store & alloc in the loop
-	gep := llvm.ConstGEP(cond, []llvm.Value{valInd.IncomingValue(0)})
-	condAlloca := builder.CreateAlloca(gep.Type(), "")
-	builder.CreateStore(gep, condAlloca)
-	load := builder.CreateLoad(condAlloca, "load")
-	gep2 := builder.CreateInBoundsGEP(load, []llvm.Value{valInd.IncomingValue(0)}, "")
-	load2 := builder.CreateLoad(gep2, "load")
-	builder.CreateStore(load2, charAlloca)
-	namedValues[l.ElementVar] = charAlloca
-	//namedValues[l.ElementVar] = builder.loa
+	namedValues[l.ElementVar] = elemAlloca
 
 	// TODO Check if loop's body does not have return inside
 	l.Body.codegen()
 
+	// Get next element from array and get next index
 	nextInd := builder.CreateAdd(valInd, llvm.ConstInt(llvm.Int32Type(), 1, false), "nextind")
+	gep2 = builder.CreateInBoundsGEP(load, []llvm.Value{nextInd}, "")
+	load2 = builder.CreateLoad(gep2, "load")
+	builder.CreateStore(load2, elemAlloca)
+
 	breakCond := builder.CreateICmp(llvm.IntNE, llvm.ConstInt(llvm.Int32Type(), uint64(cond.Operand(0).Operand(0).Type().ArrayLength()), false), nextInd, "loopcond")
 
 	loopExitBlock := builder.GetInsertBlock()
