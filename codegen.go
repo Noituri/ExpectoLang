@@ -95,6 +95,10 @@ func (b *BinaryAST) codegen() llvm.Value {
 		return b.numberCodegen()
 	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astString {
 		return b.strCodegen()
+	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astString {
+		return b.strCodegen()
+	} else if b.Lhs.Kind() == astNumber && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astNumber {
+		return b.strCodegen()
 	}
 
 	return b.numberCodegen()
@@ -314,6 +318,7 @@ func (l *LoopAST) codegen() llvm.Value {
 	valInd := builder.CreatePHI(llvm.Int32Type(), "ind")
 	valInd.AddIncoming([]llvm.Value{llvm.ConstInt(llvm.Int32Type(), 0, false)}, []llvm.BasicBlock{headerBlock})
 
+	// shadow variables with index and element
 	oldValInd, okInd := namedValues[l.IndexVar]
 	namedValues[l.IndexVar] = valInd
 
@@ -321,22 +326,26 @@ func (l *LoopAST) codegen() llvm.Value {
 	namedValues[l.ElementVar] = elemAlloca
 
 	// TODO Check if loop's body does not have return inside
-	l.Body.codegen()
+	_, isRet := l.Body.codegen()
+	if !isRet {
+		// Get next element from array and get next index
+		nextInd := builder.CreateAdd(valInd, llvm.ConstInt(llvm.Int32Type(), 1, false), "nextind")
+		gep2 = builder.CreateInBoundsGEP(load, []llvm.Value{nextInd}, "")
+		load2 = builder.CreateLoad(gep2, "load")
+		builder.CreateStore(load2, elemAlloca)
 
-	// Get next element from array and get next index
-	nextInd := builder.CreateAdd(valInd, llvm.ConstInt(llvm.Int32Type(), 1, false), "nextind")
-	gep2 = builder.CreateInBoundsGEP(load, []llvm.Value{nextInd}, "")
-	load2 = builder.CreateLoad(gep2, "load")
-	builder.CreateStore(load2, elemAlloca)
+		breakCond := builder.CreateICmp(llvm.IntNE, llvm.ConstInt(llvm.Int32Type(), uint64(cond.Operand(0).Operand(0).Type().ArrayLength()), false), nextInd, "loopcond")
 
-	breakCond := builder.CreateICmp(llvm.IntNE, llvm.ConstInt(llvm.Int32Type(), uint64(cond.Operand(0).Operand(0).Type().ArrayLength()), false), nextInd, "loopcond")
+		loopExitBlock := builder.GetInsertBlock()
+		exitBlock := llvm.AddBasicBlock(fc, "exitloop")
+		builder.CreateCondBr(breakCond, loopBlock, exitBlock)
+		builder.SetInsertPointAtEnd(exitBlock)
+		valInd.AddIncoming([]llvm.Value{nextInd}, []llvm.BasicBlock{loopExitBlock})
+	}
 
-	loopExitBlock := builder.GetInsertBlock()
-	exitBlock := llvm.AddBasicBlock(fc, "exitloop")
-	builder.CreateCondBr(breakCond, loopBlock, exitBlock)
-	builder.SetInsertPointAtEnd(exitBlock)
-	valInd.AddIncoming([]llvm.Value{nextInd}, []llvm.BasicBlock{loopExitBlock})
-
+	//println(loopBlock..Type().String())
+	loopBlock.AsValue().Dump()
+	// "unshadow" variables
 	if okInd {
 		namedValues[l.IndexVar] = oldValInd
 	} else {
