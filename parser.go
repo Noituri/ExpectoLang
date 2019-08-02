@@ -29,7 +29,7 @@ func (p *Parser) parseArgs(callee bool) []ArgsPrototype {
 	argsNames := []ArgsPrototype{}
 
 	p.lexer.NextToken()
-	for ;; {
+	for ; ; {
 		if p.lexer.CurrentToken.kind == TokIdentifier {
 			name := p.lexer.Identifier
 			if callee {
@@ -226,7 +226,7 @@ func (p *Parser) checkBinOpPrec() (int, bool, string) {
 
 func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 	pos := p.lexer.CurrentChar
-	for ;; {
+	for ; ; {
 		tokenPrec, ok, binop := p.checkBinOpPrec()
 
 		if !ok {
@@ -396,7 +396,7 @@ func (p *Parser) parseIfElse() AST {
 	}
 
 	trueBody := []AST{}
-	for ;p.lexer.CurrentToken.kind != TokElse && p.lexer.CurrentToken.kind != TokElif && p.lexer.CurrentToken.kind != TokEnd; {
+	for ; p.lexer.CurrentToken.kind != TokElse && p.lexer.CurrentToken.kind != TokElif && p.lexer.CurrentToken.kind != TokEnd; {
 		if p.lexer.CurrentToken.kind == TokEOF {
 			panic("Syntax Error: No end")
 		}
@@ -408,7 +408,7 @@ func (p *Parser) parseIfElse() AST {
 	}
 
 	elifBody := []ElifAST{}
-	for ;; {
+	for ; ; {
 		if p.lexer.CurrentToken.kind == TokEOF {
 			panic("Syntax Error: No end")
 		}
@@ -425,7 +425,7 @@ func (p *Parser) parseIfElse() AST {
 		}
 
 		tempBody := []AST{}
-		for ;p.lexer.CurrentToken.kind != TokEnd && p.lexer.CurrentToken.kind != TokElse && p.lexer.CurrentToken.kind != TokElif; {
+		for ; p.lexer.CurrentToken.kind != TokEnd && p.lexer.CurrentToken.kind != TokElse && p.lexer.CurrentToken.kind != TokElif; {
 			if p.lexer.CurrentToken.kind == TokEOF {
 				panic("Syntax Error: No end")
 			}
@@ -451,7 +451,7 @@ func (p *Parser) parseIfElse() AST {
 	falseBody := []AST{}
 	if p.lexer.CurrentToken.kind == TokElse {
 		p.lexer.NextToken()
-		for ;p.lexer.CurrentToken.kind != TokEnd; {
+		for ; p.lexer.CurrentToken.kind != TokEnd; {
 			if p.lexer.CurrentToken.kind == TokEOF {
 				panic("Syntax Error: No end")
 			}
@@ -505,10 +505,52 @@ func (p *Parser) parseReturn() AST {
 	}
 }
 
+func (p *Parser) parseLoopBody() []AST {
+	body := []AST{}
+	for ; p.lexer.CurrentToken.kind != TokEnd; {
+		if p.lexer.CurrentToken.kind == TokEOF {
+			panic("Syntax Error: Loop has no end")
+		}
+
+		expr := p.ParseExpression()
+
+		if expr != nil {
+			body = append(body, expr)
+		}
+	}
+
+	return body
+}
+
 func (p *Parser) parseLoop() AST {
 	pos := p.lexer.CurrentChar
 
 	p.lexer.NextToken()
+
+	if p.lexer.CurrentToken.kind == TokBoolean {
+		cond := p.ParseExpression()
+		if cond == nil {
+			panic("Syntax Error: No condition after 'in' keyword")
+		}
+
+		body := p.parseLoopBody()
+		p.lexer.NextToken()
+
+		return &LoopAST{
+			position(pos),
+			astLoop,
+			false,
+			cond,
+			"",
+			"",
+			BlockAST{
+				position(pos),
+				astBlock,
+				body,
+			},
+		}
+	}
+
 	if p.lexer.CurrentToken.kind != TokIdentifier {
 		panic("Syntax Error: No index variable in the loop")
 	}
@@ -536,24 +578,13 @@ func (p *Parser) parseLoop() AST {
 		panic("Syntax Error: No condition after 'in' keyword")
 	}
 
-	body := []AST{}
-	for ; p.lexer.CurrentToken.kind != TokEnd; {
-		if p.lexer.CurrentToken.kind == TokEOF {
-			panic("Syntax Error: Loop has no end")
-		}
-
-		expr := p.ParseExpression()
-
-		if expr != nil {
-			body = append(body, expr)
-		}
-	}
-
+	body := p.parseLoopBody()
 	p.lexer.NextToken()
 
 	return &LoopAST{
 		position(pos),
 		astLoop,
+		true,
 		cond,
 		ind,
 		element,

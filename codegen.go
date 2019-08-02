@@ -297,17 +297,29 @@ func (l *LoopAST) codegen() llvm.Value {
 	if cond.IsNil() {
 		panic("No condition in the loop")
 	}
-	zeroInd := llvm.ConstInt(llvm.Int32Type(), 0, false)
 
-	elemAlloca := builder.CreateArrayAlloca(cond.Operand(0).Operand(0).Type().ElementType(), llvm.ConstInt(llvm.Int32Type(), 1, false), "")
-	gep := builder.CreateInBoundsGEP(cond, []llvm.Value{zeroInd}, "")
-	load := builder.CreateLoad(gep, "load")
-	builder.CreateStore(load, elemAlloca)
+	zeroInd := llvm.ConstInt(llvm.Int32Type(), 0, false)
+	var elemAlloca llvm.Value
+	var gep llvm.Value
+	var load llvm.Value
+
+	if l.forIn {
+		elemAlloca = builder.CreateArrayAlloca(cond.Operand(0).Operand(0).Type().ElementType(), llvm.ConstInt(llvm.Int32Type(), 1, false), "")
+		gep = builder.CreateInBoundsGEP(cond, []llvm.Value{zeroInd}, "")
+		load = builder.CreateLoad(gep, "load")
+		builder.CreateStore(load, elemAlloca)
+	}
 
 	fc := builder.GetInsertBlock().Parent()
 	headerBlock := builder.GetInsertBlock()
 	loopBlock := llvm.AddBasicBlock(fc, "loop")
-	builder.CreateBr(loopBlock)
+	exitBlock := llvm.AddBasicBlock(fc, "exitloop")
+
+	if l.forIn {
+		builder.CreateBr(loopBlock)
+	} else {
+		builder.CreateCondBr(builder.CreateICmp(llvm.IntNE, cond, llvm.ConstInt(llvm.Int1Type(), 0, false), "loopcond"), loopBlock, exitBlock)
+	}
 
 	builder.SetInsertPointAtEnd(loopBlock)
 	valInd := builder.CreatePHI(llvm.Int32Type(), "ind")
@@ -315,24 +327,29 @@ func (l *LoopAST) codegen() llvm.Value {
 
 	// shadow variables with index and element
 	oldValInd, okInd := namedValues[l.IndexVar]
-	namedValues[l.IndexVar] = valInd
-
 	oldValElem, okElem := namedValues[l.ElementVar]
-	namedValues[l.ElementVar] = elemAlloca
+	if l.forIn {
+		namedValues[l.IndexVar] = valInd
+		namedValues[l.ElementVar] = elemAlloca
+	}
 
 	// TODO Check if loop's body does not have return inside
 	_, isRet := l.Body.codegen()
 	if !isRet {
 		// Get next element from array and get next index
 		nextInd := builder.CreateAdd(valInd, llvm.ConstInt(llvm.Int32Type(), 1, false), "nextind")
-		gep = builder.CreateInBoundsGEP(cond, []llvm.Value{nextInd}, "")
-		load = builder.CreateLoad(gep, "load")
-		builder.CreateStore(load, elemAlloca)
 
-		breakCond := builder.CreateICmp(llvm.IntNE, llvm.ConstInt(llvm.Int32Type(), uint64(cond.Operand(0).Operand(0).Type().ArrayLength()), false), nextInd, "loopcond")
+		var breakCond llvm.Value
+		if l.forIn {
+			gep = builder.CreateInBoundsGEP(cond, []llvm.Value{nextInd}, "")
+			load = builder.CreateLoad(gep, "load")
+			builder.CreateStore(load, elemAlloca)
+			breakCond = builder.CreateICmp(llvm.IntNE, llvm.ConstInt(llvm.Int32Type(), uint64(cond.Operand(0).Operand(0).Type().ArrayLength()), false), nextInd, "loopcond")
+		} else {
+			breakCond = builder.CreateICmp(llvm.IntNE, cond, llvm.ConstInt(llvm.Int1Type(), 0, false), "loopcond")
+		}
 
 		loopExitBlock := builder.GetInsertBlock()
-		exitBlock := llvm.AddBasicBlock(fc, "exitloop")
 		builder.CreateCondBr(breakCond, loopBlock, exitBlock)
 		builder.SetInsertPointAtEnd(exitBlock)
 		valInd.AddIncoming([]llvm.Value{nextInd}, []llvm.BasicBlock{loopExitBlock})

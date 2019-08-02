@@ -86,6 +86,7 @@ type IfElseAST struct {
 type LoopAST struct {
 	position
 	kind
+	forIn	   bool
 	Condition  AST
 	IndexVar   string
 	ElementVar string

@@ -5,4 +5,8 @@ fc main()
         printf(v)
         printf("\n")
     end
+
+    loop false
+        printf("OwO")
+    end
 end
