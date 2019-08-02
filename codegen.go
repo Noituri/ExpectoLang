@@ -300,14 +300,9 @@ func (l *LoopAST) codegen() llvm.Value {
 	zeroInd := llvm.ConstInt(llvm.Int32Type(), 0, false)
 
 	elemAlloca := builder.CreateArrayAlloca(cond.Operand(0).Operand(0).Type().ElementType(), llvm.ConstInt(llvm.Int32Type(), 1, false), "")
-	gep := llvm.ConstGEP(cond, []llvm.Value{zeroInd})
-	condAlloca := builder.CreateAlloca(gep.Type(), "")
-
-	builder.CreateStore(gep, condAlloca)
-	load := builder.CreateLoad(condAlloca, "load")
-	gep2 := builder.CreateInBoundsGEP(load, []llvm.Value{zeroInd}, "")
-	load2 := builder.CreateLoad(gep2, "load")
-	builder.CreateStore(load2, elemAlloca)
+	gep := builder.CreateInBoundsGEP(cond, []llvm.Value{zeroInd}, "")
+	load := builder.CreateLoad(gep, "load")
+	builder.CreateStore(load, elemAlloca)
 
 	fc := builder.GetInsertBlock().Parent()
 	headerBlock := builder.GetInsertBlock()
@@ -330,9 +325,9 @@ func (l *LoopAST) codegen() llvm.Value {
 	if !isRet {
 		// Get next element from array and get next index
 		nextInd := builder.CreateAdd(valInd, llvm.ConstInt(llvm.Int32Type(), 1, false), "nextind")
-		gep2 = builder.CreateInBoundsGEP(load, []llvm.Value{nextInd}, "")
-		load2 = builder.CreateLoad(gep2, "load")
-		builder.CreateStore(load2, elemAlloca)
+		gep = builder.CreateInBoundsGEP(cond, []llvm.Value{nextInd}, "")
+		load = builder.CreateLoad(gep, "load")
+		builder.CreateStore(load, elemAlloca)
 
 		breakCond := builder.CreateICmp(llvm.IntNE, llvm.ConstInt(llvm.Int32Type(), uint64(cond.Operand(0).Operand(0).Type().ArrayLength()), false), nextInd, "loopcond")
 

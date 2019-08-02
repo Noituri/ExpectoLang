@@ -1,21 +1,8 @@
 @printf(x): float
 
-fc call
-    printf("that's it\n")
-end
-
-fc sum(a: float, b: float): float
-    return a + b
-end
-
 fc main()
     loop i, v in "IterThroughMe"
         printf(v)
         printf("\n")
-
-        if true
-            printf("HERE I AM\n")
-        end
     end
-    call()
 end
