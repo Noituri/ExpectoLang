@@ -7,24 +7,25 @@ import (
 )
 
 const (
-	TokEOF      = iota // End of string/file
-	TokFunction        // function
-	TokEnd             // end of statements etc
-	TokIdentifier
-	TokReturn   // procedure return
-	TokExtern   // extern procedure
-	TokNumber   // number
-	TokStr		// string
-	TokLParen   // (
-	TokRParen   // )
-	TokIf		// If
-	TokElse		// If else
-	TokElif		// if else if (elif)
-	TokLoop		// for/while/foreach loop
-	TokIn		// loop - element in array
-	TokEqual    // ==
-	TokAssign   // =
-	TokUnknown  // Not specified type
+	TokEOF        = iota // End of string/file
+	TokFunction          // function
+	TokEnd               // end of statements etc
+	TokIdentifier        // Identifier
+	TokReturn            // procedure return
+	TokExtern            // extern procedure
+	TokNumber            // number
+	TokStr               // string
+	TokBoolean           // boolean
+	TokLParen            // (
+	TokRParen            // )
+	TokIf                // If
+	TokElse              // If else
+	TokElif              // if else if (elif)
+	TokLoop              // for/while/foreach loop
+	TokIn                // loop - element in array
+	TokEqual             // ==
+	TokAssign            // =
+	TokUnknown           // Not specified type
 )
 
 type tokenType uint8
@@ -39,7 +40,7 @@ type Lexer struct {
 	CurrentToken  Token
 	Identifier    string
 	numVal        float64
-	strVal		  string
+	strVal        string
 	CurrentChar   int
 	LastChar      uint8
 	isEOF         bool
@@ -104,6 +105,12 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 			return true
 		}
 
+		if l.Identifier == "true" || l.Identifier == "false" {
+			l.CurrentToken.kind = TokBoolean
+			l.CurrentToken.val = -1
+			return true
+		}
+
 		if l.Identifier == "if" {
 			l.CurrentToken.kind = TokIf
 			l.CurrentToken.val = -1
@@ -146,7 +153,7 @@ func (l *Lexer) isDigit() (stopLexing bool) {
 		tempStr := ""
 		wasDot := l.LastChar == '.'
 
-		for ;; {
+		for ; ; {
 			tempStr += string(rune(l.LastChar))
 			if l.nextChar() != nil {
 				l.CurrentToken.kind = TokEOF
@@ -268,7 +275,7 @@ func (l *Lexer) isStr() (stopLexing bool) {
 		}
 
 		l.strVal = ""
-		for  l.LastChar != '"' {
+		for l.LastChar != '"' {
 			l.strVal += string(rune(l.LastChar))
 
 			if l.nextChar() != nil {

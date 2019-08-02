@@ -360,3 +360,7 @@ func (l *LoopAST) codegen() llvm.Value {
 
 	return llvm.ConstNull(llvm.Int1Type())
 }
+
+func (b *BoolAST) codegen() llvm.Value {
+	return llvm.ConstInt(llvm.Int1Type(), uint64(b.Value), false)
+}

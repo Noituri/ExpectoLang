@@ -9,6 +9,7 @@ const (
 	astBinary
 	astNumber
 	astString
+	astBool
 	astVariable
 	astCall
 	astBlock
@@ -46,6 +47,12 @@ type BinaryAST struct {
 	kind
 	Op       string
 	Lhs, Rhs AST
+}
+
+type BoolAST struct {
+	position
+	kind
+	Value int
 }
 
 type StringAST struct {

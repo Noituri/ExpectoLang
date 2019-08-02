@@ -10,12 +10,12 @@ end
 
 fc main()
     loop i, v in "IterThroughMe"
-        /*if v == "r"
-            return
-        end*/
         printf(v)
         printf("\n")
-        return
+
+        if true
+            printf("HERE I AM\n")
+        end
     end
     call()
 end

@@ -18,6 +18,8 @@ func (p *Parser) getType(t string) string {
 		return LitFloat
 	case LitString:
 		return LitString
+	case LitBool:
+		return LitBool
 	default:
 		panic(fmt.Sprintf("type-%s-does-no-exit", t))
 	}
@@ -282,6 +284,8 @@ func (p *Parser) ParsePrimary() AST {
 		return p.parseReturn()
 	case TokLoop:
 		return p.parseLoop()
+	case TokBoolean:
+		return p.parseBool()
 	case TokIn:
 		panic("Syntax Error: Invalid 'in' keyword usage")
 	case TokFunction:
@@ -295,6 +299,20 @@ func (p *Parser) ParsePrimary() AST {
 		p.lexer.NextToken()
 		return nil
 	}
+}
+
+func (p *Parser) parseBool() AST {
+	pos := p.lexer.CurrentChar
+	val := 0
+
+	if p.lexer.Identifier == "true" {
+		val = 1
+	} else if p.lexer.Identifier != "false" {
+		panic("Error occurred while parsing boolean")
+	}
+
+	p.lexer.NextToken()
+	return &BoolAST{position(pos), astBool, val}
 }
 
 func (p *Parser) parseParen() AST {
