@@ -185,36 +185,36 @@ func (b *BlockAST) codegen() ([]llvm.Value, bool) {
 // TODO Check for redefinition
 // TODO Check if function has return
 func (p *FunctionAST) codegen() llvm.Value {
-	proc := module.NamedFunction(p.Proto.Name)
+	fc := module.NamedFunction(p.Proto.Name)
 
-	if proc.IsNil() {
-		proc = p.Proto.codegen()
+	if fc.IsNil() {
+		fc = p.Proto.codegen()
 	}
 
-	if proc.IsNil() {
+	if fc.IsNil() {
 		panic(fmt.Sprintf(`Could not create function "%s"`, p.Proto.Name))
 	}
-	block := llvm.AddBasicBlock(proc, "entry")
+	block := llvm.AddBasicBlock(fc, "entry")
 	builder.SetInsertPointAtEnd(block)
 
 	namedValues = map[string]llvm.Value{}
 
-	for _, param := range proc.Params() {
+	for _, param := range fc.Params() {
 		namedValues[param.Name()] = param
 	}
 
 	p.Body.codegen()
 
-	if llvm.VerifyFunction(proc, llvm.PrintMessageAction) != nil {
-		proc.EraseFromParentAsFunction()
+	if llvm.VerifyFunction(fc, llvm.PrintMessageAction) != nil {
+		fc.EraseFromParentAsFunction()
 		panic(fmt.Sprintf(`Error occurred while verifing function "%s"`, p.Proto.Name))
 	}
 
 	if os.Getenv("DEBUG") != "true" {
-		fcPassManager.RunFunc(proc)
+		fcPassManager.RunFunc(fc)
 	}
 
-	return proc
+	return fc
 }
 
 func (i *IfElseAST) codegen() llvm.Value {
@@ -341,10 +341,10 @@ func (l *LoopAST) codegen() llvm.Value {
 		builder.CreateCondBr(breakCond, loopBlock, exitBlock)
 		builder.SetInsertPointAtEnd(exitBlock)
 		valInd.AddIncoming([]llvm.Value{nextInd}, []llvm.BasicBlock{loopExitBlock})
+	} else {
+		l.kind = astReturn
 	}
 
-	//println(loopBlock..Type().String())
-	loopBlock.AsValue().Dump()
 	// "unshadow" variables
 	if okInd {
 		namedValues[l.IndexVar] = oldValInd
