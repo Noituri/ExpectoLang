@@ -140,6 +140,8 @@ func (p *PrototypeAST) codegen() llvm.Value {
 			args = append(args, llvm.FloatType())
 		case LitString:
 			args = append(args, llvm.PointerType(llvm.Int8Type(), 0))
+		case LitBool:
+			args = append(args, llvm.Int1Type())
 		default:
 			panic(fmt.Sprintf("type-%s-does-no-exit", a.ArgType))
 		}

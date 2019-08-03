@@ -79,7 +79,7 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 			return true
 		}
 
-		for unicode.IsLetter(rune(l.LastChar)) {
+		for unicode.IsLetter(rune(l.LastChar)) || l.LastChar == '_' {
 			l.Identifier += string(rune(l.LastChar))
 
 			if l.nextChar() != nil {

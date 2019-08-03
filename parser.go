@@ -543,7 +543,7 @@ func (p *Parser) parseLoop() AST {
 			cond,
 			"",
 			"",
-			BlockAST{
+			BlockAST {
 				position(pos),
 				astBlock,
 				body,
@@ -558,7 +558,26 @@ func (p *Parser) parseLoop() AST {
 
 	p.lexer.NextToken()
 	if p.lexer.CurrentToken.val != ',' {
-		panic("Syntax Error: No comma in the loop")
+		body := p.parseLoopBody()
+		p.lexer.NextToken()
+
+		return &LoopAST{
+			position(pos),
+			astLoop,
+			false,
+			&VariableAST{
+				position: position(pos),
+				kind:     astVariable,
+				Name:     ind,
+			},
+			"",
+			"",
+			BlockAST {
+				position(pos),
+				astBlock,
+				body,
+			},
+		}
 	}
 
 	p.lexer.NextToken()

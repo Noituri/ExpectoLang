@@ -1,5 +1,11 @@
 @printf(x): float
 
+fc test_loop(use_loop: bool)
+ loop use_loop
+        printf("Here I am\n")
+  end
+end
+
 fc main()
     loop i, v in "IterThroughMe"
         printf(v)
@@ -9,4 +15,6 @@ fc main()
     loop false
         printf("OwO")
     end
+
+    test_loop(true)
 end
