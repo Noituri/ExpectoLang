@@ -5,6 +5,7 @@ const (
 	LitString = "str"
 	LitFloat  = "float"
 	LitBool	  = "bool"
+	LitInt	  = "int"
 )
 
 

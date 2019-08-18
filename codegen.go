@@ -142,6 +142,8 @@ func (p *PrototypeAST) codegen() llvm.Value {
 			args = append(args, llvm.PointerType(llvm.Int8Type(), 0))
 		case LitBool:
 			args = append(args, llvm.Int1Type())
+		case LitInt:
+			args = append(args, llvm.Int32Type())
 		default:
 			panic(fmt.Sprintf("type-%s-does-no-exit", a.ArgType))
 		}
@@ -155,6 +157,8 @@ func (p *PrototypeAST) codegen() llvm.Value {
 		fcType = llvm.FunctionType(llvm.PointerType(llvm.Int8Type(), 0), args, false)
 	case LitVoid:
 		fcType = llvm.FunctionType(llvm.VoidType(), args, false)
+	case LitInt:
+		fcType = llvm.FunctionType(llvm.Int32Type(), args, false)
 	default:
 		// TODO THIS IS MY DEBUG
 		//fcType = llvm.FunctionType(llvm.FloatType(), args, false)

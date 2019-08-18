@@ -20,6 +20,8 @@ func (p *Parser) getType(t string) string {
 		return LitString
 	case LitBool:
 		return LitBool
+	case LitInt:
+		return LitInt
 	default:
 		panic(fmt.Sprintf("type-%s-does-no-exit", t))
 	}
@@ -35,7 +37,7 @@ func (p *Parser) parseArgs(callee bool) []ArgsPrototype {
 			if callee {
 				argsNames = append(argsNames, ArgsPrototype{
 					Name:    name,
-					ArgType: LitString,
+					ArgType: LitInt,
 				})
 			} else {
 				p.lexer.NextToken()
@@ -166,7 +168,7 @@ func (p *Parser) ParseFunction() (FunctionAST, error) {
 
 func (p *Parser) ParseExtern() (PrototypeAST, error) {
 	p.lexer.NextToken()
-	return p.ParsePrototype(true)
+	return p.ParsePrototype(false)
 }
 
 func (p *Parser) ParseTopLevelExpr() (FunctionAST, error) {
