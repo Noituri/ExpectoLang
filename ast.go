@@ -7,7 +7,8 @@ import (
 const (
 	astFunction kind = iota
 	astBinary
-	astNumber
+	astNumberFloat
+	astNumberInt
 	astString
 	astBool
 	astVariable

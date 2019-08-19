@@ -8,7 +8,7 @@ end
 */
 fc main()
     loop i, v in "IterThroughMe"
-        printf("%d) %s\n", i, v)
+        printf("%d) %s\n", 2, v)
     end
 /*
     loop false

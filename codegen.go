@@ -29,6 +29,10 @@ func (s *StringAST) codegen() llvm.Value {
 }
 
 func (n *NumberLiteralAST) codegen() llvm.Value {
+	if n.Kind() == astNumberInt {
+		return llvm.ConstInt(llvm.Int32Type(), uint64(n.Value), false)
+	}
+
 	return llvm.ConstFloat(llvm.FloatType(), n.Value)
 }
 
@@ -91,13 +95,13 @@ func (b *BinaryAST) strCodegen() llvm.Value {
 }
 
 func (b *BinaryAST) codegen() llvm.Value {
-	if b.Lhs.Kind() == astNumber && b.Rhs.Kind() == astNumber {
+	if b.Lhs.Kind() == astNumberFloat && b.Rhs.Kind() == astNumberFloat {
 		return b.numberCodegen()
 	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astString {
 		return b.strCodegen()
 	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astString {
 		return b.strCodegen()
-	} else if b.Lhs.Kind() == astNumber && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astNumber {
+	} else if b.Lhs.Kind() == astNumberFloat && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astNumberFloat {
 		return b.strCodegen()
 	}
 
