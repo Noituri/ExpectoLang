@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"math"
 )
 
 type Parser struct {
@@ -384,10 +383,10 @@ func (p *Parser) parseStr() AST {
 func (p *Parser) parseNumber() AST {
 	pos := p.lexer.CurrentChar
 	val := p.lexer.numVal
-	kind := astNumberFloat
+	kind := astNumberInt
 
-	if val == math.Trunc(val) {
-		kind = astNumberInt
+	if p.lexer.IsFloat {
+		kind = astNumberFloat
 	}
 
 	p.lexer.NextToken()

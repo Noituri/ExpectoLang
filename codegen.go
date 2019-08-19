@@ -33,7 +33,7 @@ func (n *NumberLiteralAST) codegen() llvm.Value {
 		return llvm.ConstInt(llvm.Int32Type(), uint64(n.Value), false)
 	}
 
-	return llvm.ConstFloat(llvm.FloatType(), n.Value)
+	return llvm.ConstFloat(llvm.DoubleType(), n.Value)
 }
 
 func (v *VariableAST) codegen() llvm.Value {
@@ -62,8 +62,41 @@ func (b *BinaryAST) numberCodegen() llvm.Value {
 	case "*":
 		return builder.CreateFMul(l, r, "multmo")
 	case "/":
-		// TODO check if r is not 0
-		return builder.CreateFDiv(l, r, "divtmp")
+		if os.Getenv("PRELUDE") == "empty" {
+			return builder.CreateFDiv(l, r, "divtmp")
+		}
+
+		cond := builder.CreateFCmp(llvm.FloatOEQ, llvm.ConstFloat(llvm.DoubleType(), 0), r, "cmptmp")
+		fc := builder.GetInsertBlock().Parent()
+		thenBlock := llvm.AddBasicBlock(fc, "thendivchecker")
+		elseBlock := llvm.AddBasicBlock(fc, "elsedivchecker")
+		exitBlock := llvm.AddBasicBlock(fc, "exitdivchecker")
+		builder.CreateCondBr(cond, thenBlock, elseBlock)
+
+		builder.SetInsertPointAtEnd(thenBlock)
+		calleePanic := module.NamedFunction("printf")
+		if calleePanic.IsNil() {
+			panic(fmt.Sprintf(`Function printf could not be referenced`))
+		}
+
+		panicMesssage := builder.CreateGlobalStringPtr("Panic: right side of the equation is equal to 0\n", "")
+		argsValues := []llvm.Value{panicMesssage}
+		builder.CreateCall(calleePanic, argsValues, "")
+
+		calleeExit := module.NamedFunction("exit")
+		if calleeExit.IsNil() {
+			panic(fmt.Sprintf(`Function exit could not be referenced`))
+		}
+
+		builder.CreateCall(calleeExit, []llvm.Value{llvm.ConstInt(llvm.Int32Type(), 0, false)}, "")
+		builder.CreateBr(exitBlock)
+
+		builder.SetInsertPointAtEnd(elseBlock)
+		result := builder.CreateFDiv(l, r, "divtmp")
+		builder.CreateBr(exitBlock)
+
+		builder.SetInsertPointAtEnd(exitBlock)
+		return result
 	case "<":
 		return builder.CreateFCmp(llvm.FloatOLT, l, r, "cmptmp")
 	case "==":
@@ -138,10 +171,9 @@ func (p *PrototypeAST) codegen() llvm.Value {
 	args := make([]llvm.Type, 0, len(p.Args))
 
 	for _, a := range p.Args {
-		// TODO use args type
 		switch a.ArgType {
 		case LitFloat:
-			args = append(args, llvm.FloatType())
+			args = append(args, llvm.DoubleType())
 		case LitString:
 			args = append(args, llvm.PointerType(llvm.Int8Type(), 0))
 		case LitBool:
@@ -156,7 +188,7 @@ func (p *PrototypeAST) codegen() llvm.Value {
 
 	switch p.ReturnType {
 	case LitFloat:
-		fcType = llvm.FunctionType(llvm.FloatType(), args, false)
+		fcType = llvm.FunctionType(llvm.DoubleType(), args, false)
 	case LitString:
 		fcType = llvm.FunctionType(llvm.PointerType(llvm.Int8Type(), 0), args, false)
 	case LitVoid:
@@ -164,9 +196,6 @@ func (p *PrototypeAST) codegen() llvm.Value {
 	case LitInt:
 		fcType = llvm.FunctionType(llvm.Int32Type(), args, false)
 	default:
-		// TODO THIS IS MY DEBUG
-		//fcType = llvm.FunctionType(llvm.FloatType(), args, false)
-		//fcType = llvm.FunctionType(llvm.Int32Type(), args, false)
 		panic(fmt.Sprintf("type-%s-does-no-exit", p.ReturnType))
 	}
 
@@ -193,7 +222,6 @@ func (b *BlockAST) codegen() ([]llvm.Value, bool) {
 }
 
 // TODO Check for redefinition
-// TODO Check if function has return
 func (p *FunctionAST) codegen() llvm.Value {
 	fc := module.NamedFunction(p.Proto.Name)
 

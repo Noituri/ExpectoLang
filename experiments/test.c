@@ -20,10 +20,11 @@
 //}
 
 int main() {
-    char* test = "HELLO";
-    for (int i = 0; i < 5; i++) {
-        char c = test[0];
-        printf(&c);
-    }
-    return 0;
+    printf("%.6f\n", 2.2);
+//    char* test = "HELLO";
+//    for (int i = 0; i < 5; i++) {
+//        char c = test[0];
+//        printf(&c);
+//    }
+//    return 0;
 }

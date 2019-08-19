@@ -1,20 +1,11 @@
-@printf(x: str, y: int, z: str): float
-/*
-fc test_loop(use_loop: bool)
- loop use_loop
-        printf("Here I am\n")
-  end
-end
-*/
-fc main()
+@printf(x: str): int
+@exit(x: int)
+
+fc main
     loop i, v in "IterThroughMe"
-        printf("%d) %s\n", 2, v)
-    end
-/*
-    loop false
-        printf("OwO")
+        .1 / 0.1
+        printf("OWO\n")
     end
 
-    test_loop(true)
-*/
+    printf("Hi")
 end

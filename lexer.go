@@ -45,6 +45,7 @@ type Lexer struct {
 	LastChar      uint8
 	isEOF         bool
 	ignoreNewLine bool
+	IsFloat		  bool
 }
 
 func (l *Lexer) nextChar() error {
@@ -151,7 +152,7 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 func (l *Lexer) isDigit() (stopLexing bool) {
 	if unicode.IsNumber(rune(l.LastChar)) || l.LastChar == '.' {
 		tempStr := ""
-		wasDot := l.LastChar == '.'
+		l.IsFloat = l.LastChar == '.'
 
 		for ; ; {
 			tempStr += string(rune(l.LastChar))
@@ -162,10 +163,10 @@ func (l *Lexer) isDigit() (stopLexing bool) {
 			}
 
 			if l.LastChar == '.' {
-				if wasDot {
+				if l.IsFloat {
 					panic("Invalid use of '.'")
 				} else {
-					wasDot = true
+					l.IsFloat = true
 				}
 			}
 
@@ -229,6 +230,9 @@ func (l *Lexer) isComment() (stopLexing bool) {
 
 			l.NextToken()
 			return true
+		} else {
+			l.LastChar = '/'
+			return false
 		}
 	}
 	return false
