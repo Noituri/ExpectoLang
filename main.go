@@ -5,59 +5,60 @@ import (
 	"io/ioutil"
 )
 
-func handleProcedure(parser *Parser) {
-	procAST, err := parser.ParseFunction()
-
+func handleFunction(parser *Parser, init bool) {
+	functionAST, err := parser.ParseFunction()
 	if err != nil {
-		panic("Procedure Parse Error: " + err.Error())
+		panic("Function Parse Error: " + err.Error())
 	}
 
-	procIR := procAST.codegen()
-
-	if procIR.IsNil() {
-		panic("Procedure CodeGen Error: Could not create IR")
-		return
+	if init {
+		protoIR := functionAST.Proto.codegen()
+		if protoIR.IsNil() {
+			panic("Extern CodeGen Error: Could not create IR")
+		}
+	} else {
+		fcIR := functionAST.codegen()
+		if fcIR.IsNil() {
+			panic("Function CodeGen Error: Could not create IR")
+		}
 	}
 }
 
-func handleExtern(parser *Parser) {
+func handleExtern(parser *Parser, init bool) {
 	protoAST, err := parser.ParseExtern()
-
 	if err != nil {
 		panic("Extern Parse Error: " + err.Error())
-		return
 	}
 
-	externIR := protoAST.codegen()
-
-	if externIR.IsNil() {
-		panic("Extern CodeGen Error: Could not create IR")
-		return
+	if init {
+		externIR := protoAST.codegen()
+		if externIR.IsNil() {
+			panic("Extern CodeGen Error: Could not create IR")
+		}
 	}
 }
 
-func handleTopLevelExpression(parser *Parser) {
+func handleTopLevelExpression(parser *Parser, init bool) {
 	topAST, err := parser.ParseTopLevelExpr()
-
 	if err != nil {
 		panic("Top Level Expression Parse Error: " + err.Error())
-		return
 	}
 
-	topIR := topAST.codegen()
-	if topIR.IsNil() {
-		panic("Top Level Expression CodeGen Error: Could not create IR")
-		return
+	if !init {
+		topIR := topAST.codegen()
+		if topIR.IsNil() {
+			panic("Top Level Expression CodeGen Error: Could not create IR")
+		}
 	}
 }
 
-func handle(parser Parser) {
+func handle(parser Parser, init bool) {
 	switch parser.lexer.CurrentToken.kind {
 	case TokEOF:
 		return
 	case TokFunction:
 		{
-			handleProcedure(&parser)
+			handleFunction(&parser, init)
 			//fun, err := parser.ParseFunction()
 			//
 			//if err != nil {
@@ -70,10 +71,10 @@ func handle(parser Parser) {
 			//println(b.String())
 		}
 	case TokExtern:
-		handleExtern(&parser)
+		handleExtern(&parser, init)
 	default:
 		{
-			handleTopLevelExpression(&parser)
+			handleTopLevelExpression(&parser, init)
 			//fun, err := parser.ParseTopLevelExpr()
 			//if err != nil {
 			//	handle(parser)
@@ -85,37 +86,21 @@ func handle(parser Parser) {
 		}
 	}
 
-	handle(parser)
+	handle(parser, init)
 }
 
 func main() {
-	dat, err := ioutil.ReadFile("./example.exp")
+	data, err := ioutil.ReadFile("./example.exp")
 	if err != nil {
 		panic(err.Error())
 	}
 
-	parser := Parser{
-		lexer: Lexer{
-			Source:      string(dat),
-			CurrentChar: -1,
-			LastChar:    32,
-			ignoreNewLine: true,
-		},
-		binOpPrecedence: map[string]int{
-			"=":  2,
-			"==": 9,
-			"<":  10,
-			"+":  20,
-			"-":  20,
-			"*":  40,
-			"/":  40,
-		},
-	}
-
+	parser := NewParser(string(data))
+	parser.lexer.NextToken()
 	InitModuleAndPassManager()
 
-	parser.lexer.NextToken()
-	handle(parser)
+	handle(parser, true)
+	handle(parser, false)
 	if llvm.VerifyModule(module, llvm.PrintMessageAction) != nil {
 		panic("Failed to verify module")
 	}

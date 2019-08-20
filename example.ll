@@ -11,6 +11,12 @@ declare i32 @printf(i8* %x)
 
 declare void @exit(i32 %x)
 
+define double @add(double %a, double %b) {
+entry:
+  %addtmp = fadd double %a, %b
+  ret double %addtmp
+}
+
 define void @main() {
 entry:
   br label %loop
@@ -23,7 +29,8 @@ loop:                                             ; preds = %loop, %entry
   br i1 %loopcond, label %exitloop, label %loop
 
 exitloop:                                         ; preds = %loop
-  %0 = call i32 @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @strtmp.2, i64 0, i64 0))
+  %0 = call double @add(double 1.000000e+00, double 1.000000e-01)
+  %1 = call i32 @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @strtmp.2, i64 0, i64 0))
   ret void
 }
 

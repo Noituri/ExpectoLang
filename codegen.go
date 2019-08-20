@@ -150,7 +150,7 @@ func (c *CallAST) codegen() llvm.Value {
 	}
 
 	if callee.ParamsCount() != len(c.args) {
-		panic(fmt.Sprintf(`Incorrect arguments passed in function "%s"`, c.Callee))
+		panic(fmt.Sprintf(`Incorrect arguments passed in the function "%s"`, c.Callee))
 	}
 
 	argsValues := []llvm.Value{}

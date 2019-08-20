@@ -7,25 +7,25 @@ import (
 )
 
 const (
-	TokEOF        = iota // End of string/file
-	TokFunction          // function
-	TokEnd               // end of statements etc
-	TokIdentifier        // Identifier
-	TokReturn            // procedure return
-	TokExtern            // extern procedure
-	TokNumber            // number
-	TokStr               // string
-	TokBoolean           // boolean
-	TokLParen            // (
-	TokRParen            // )
-	TokIf                // If
-	TokElse              // If else
-	TokElif              // if else if (elif)
-	TokLoop              // for/while/foreach loop
-	TokIn                // loop - element in array
-	TokEqual             // ==
-	TokAssign            // =
-	TokUnknown           // Not specified type
+	TokEOF        = iota // End of string/file        0
+	TokFunction          // function				  1
+	TokEnd               // end of statements etc	  2
+	TokIdentifier        // Identifier				  3
+	TokReturn            // procedure return		  4
+	TokExtern            // extern procedure		  5
+	TokNumber            // number					  6
+	TokStr               // string					  7
+	TokBoolean           // boolean					  8
+	TokLParen            // (						  9
+	TokRParen            // )						  10
+	TokIf                // If						  11
+	TokElse              // If else					  12
+	TokElif              // if else if (elif)		  13
+	TokLoop              // for/while/foreach loop	  14
+	TokIn                // loop - element in array	  15
+	TokEqual             // ==						  16
+	TokAssign            // =						  17
+	TokUnknown           // Not specified type		  18
 )
 
 type tokenType uint8

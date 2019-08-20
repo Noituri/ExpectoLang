@@ -10,6 +10,26 @@ type Parser struct {
 	binOpPrecedence map[string]int
 }
 
+func NewParser(data string) Parser {
+	return Parser{
+		lexer: Lexer{
+			Source:      data,
+			CurrentChar: -1,
+			LastChar:    32,
+			ignoreNewLine: true,
+		},
+		binOpPrecedence: map[string]int{
+			"=":  2,
+			"==": 9,
+			"<":  10,
+			"+":  20,
+			"-":  20,
+			"*":  40,
+			"/":  40,
+		},
+	}
+}
+
 func (p *Parser) getType(t string) string {
 	switch t {
 	case LitVoid:
