@@ -6,22 +6,30 @@ import (
 )
 
 type Parser struct {
-	lexer           Lexer
-	binOpPrecedence map[string]int
+	lexer             Lexer
+	defaultPrecedence int
+	isOperator		  bool
+	isBinaryOp		  bool
+	binOpPrecedence   map[string]int
 }
 
 func NewParser(data string) Parser {
 	return Parser{
 		lexer: Lexer{
-			Source:      data,
-			CurrentChar: -1,
-			LastChar:    32,
+			Source:        data,
+			CurrentChar:   -1,
+			LastChar:      32,
 			ignoreNewLine: true,
+			ignoreSpace: true,
 		},
 		binOpPrecedence: map[string]int{
 			"=":  2,
 			"==": 9,
+			"!=": 9,
 			"<":  10,
+			">":  10,
+			">=": 10,
+			"<=": 10,
 			"+":  20,
 			"-":  20,
 			"*":  40,
@@ -99,8 +107,16 @@ func (p *Parser) parseArgs(callee bool) []ArgsPrototype {
 	return argsNames
 }
 
+// TODO: remove callee bool
 func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 	pos := p.lexer.CurrentChar
+	isOperator := p.isOperator
+	isBinOp := p.isBinaryOp
+	defPrecedence := p.defaultPrecedence
+
+	p.isOperator = false
+	p.isBinaryOp = false
+	p.defaultPrecedence = 0
 
 	if p.lexer.CurrentToken.kind != TokIdentifier {
 		return PrototypeAST{}, errors.New("no-function-name")
@@ -136,6 +152,9 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 		astPrototype,
 		funcName,
 		argsNames,
+		isOperator,
+		isBinOp,
+		defPrecedence,
 		returnType,
 	}, nil
 }
@@ -204,6 +223,9 @@ func (p *Parser) ParseTopLevelExpr() (FunctionAST, error) {
 		astPrototype,
 		"",
 		nil,
+		false,
+		false,
+		0,
 		LitVoid,
 	}
 
@@ -552,7 +574,6 @@ func (p *Parser) parseLoopBody() []AST {
 
 func (p *Parser) parseLoop() AST {
 	pos := p.lexer.CurrentChar
-
 	p.lexer.NextToken()
 
 	if p.lexer.CurrentToken.kind == TokBoolean {
@@ -571,7 +592,7 @@ func (p *Parser) parseLoop() AST {
 			cond,
 			"",
 			"",
-			BlockAST {
+			BlockAST{
 				position(pos),
 				astBlock,
 				body,
@@ -600,7 +621,7 @@ func (p *Parser) parseLoop() AST {
 			},
 			"",
 			"",
-			BlockAST {
+			BlockAST{
 				position(pos),
 				astBlock,
 				body,
@@ -641,4 +662,119 @@ func (p *Parser) parseLoop() AST {
 			body,
 		},
 	}
+}
+
+func (p *Parser) parseAssign(panicMessage string) interface{} {
+	p.lexer.NextToken()
+	if p.lexer.CurrentToken.kind != TokAssign {
+		panic(panicMessage)
+	}
+
+	p.lexer.NextToken()
+	if p.lexer.CurrentToken.kind == TokIdentifier ||  p.lexer.CurrentToken.kind == TokAtom {
+		return p.lexer.Identifier
+	}
+
+	if p.lexer.CurrentToken.kind == TokNumber {
+		return p.lexer.numVal
+	}
+
+	panic(panicMessage)
+}
+
+func (p *Parser) parsePrimitiveAttr() {
+	_ = p.lexer.CurrentChar
+	p.lexer.NextToken()
+
+	if p.lexer.CurrentToken.kind != TokLParen {
+		panic("Syntax Error: No ( in the primitive attribute")
+	}
+
+	prevToken := 0
+	for ;; {
+		if p.lexer.CurrentToken.kind == TokRParen {
+			break
+		}
+		p.lexer.NextToken()
+		if p.lexer.CurrentToken.kind == TokRParen {
+			if prevToken == ',' {
+				panic("Syntax Error: Wrong attribute definition")
+			}
+
+			break
+		}
+
+		if p.lexer.CurrentToken.kind == TokEOF {
+			panic("Syntax Error: Primitive attribute is not closed")
+		}
+
+		if p.lexer.CurrentToken.kind != TokIdentifier {
+			panic("Syntax Error: No identifier in the primitive attribute")
+		}
+
+		switch p.lexer.Identifier {
+		case "type":
+			typ := p.parseAssign("Syntax Error: Invalid value assigning in the 'type' option of the primitive attribute")
+			switch typ {
+			case ":unary":
+				p.isBinaryOp = false
+			case ":binary":
+				p.isBinaryOp = true
+			default:
+				panic("Syntax Error: Type '"+typ.(string)+"' in the primitive attribute does not exist")
+			}
+		case "precedence":
+			precedence, ok := p.parseAssign("Syntax Error: Invalid value assigning in the 'precedence' option of the primitive attribute").(float64)
+			if !ok {
+				panic("Syntax Error: Could not assign value to precedence because value is not a number")
+			}
+
+			p.defaultPrecedence = int(precedence)
+		default:
+			panic("Syntax Error: There is no \"" + p.lexer.Identifier + "\" option in the primitive attribute")
+		}
+
+		p.lexer.NextToken()
+		if p.lexer.CurrentToken.val != ',' && p.lexer.CurrentToken.kind != TokRParen {
+			panic("Syntax Error: Wrong attribute definition")
+		}
+
+		prevToken = p.lexer.CurrentToken.val
+	}
+
+	p.isOperator = true
+}
+
+func (p *Parser) parseAttribute() {
+	_ = p.lexer.CurrentChar
+
+	p.lexer.NextToken()
+
+	for ;; {
+		if p.lexer.CurrentToken.val == ']' {
+			break
+		}
+
+		if p.lexer.CurrentToken.kind == TokEOF {
+			panic("Syntax Error: Attribute is not closed")
+		}
+
+		if p.lexer.CurrentToken.kind != TokIdentifier {
+			panic("Syntax Error: No identifier in the attribute")
+		}
+
+		switch p.lexer.Identifier {
+		case "primitive":
+			p.parsePrimitiveAttr()
+		default:
+			panic("Attribute Error: '" + p.lexer.Identifier + "' does not exist")
+		}
+
+		p.lexer.NextToken()
+		if p.lexer.CurrentToken.val != ',' && p.lexer.CurrentToken.val != ']' {
+			panic("Syntax Error: Wrong attribute definition")
+		}
+	}
+
+	p.lexer.NextToken()
 }

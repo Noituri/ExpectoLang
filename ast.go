@@ -18,6 +18,7 @@ const (
 	astIfElse
 	astReturn
 	astLoop
+	astAttribute
 )
 
 type AST interface {
@@ -123,6 +124,9 @@ type PrototypeAST struct {
 	kind
 	Name       string
 	Args       []ArgsPrototype
+	IsOperator bool
+	IsUnaryOp  bool
+	Precedence int
 	ReturnType string
 }
 

@@ -25,7 +25,9 @@ const (
 	TokIn                // loop - element in array	  15
 	TokEqual             // ==						  16
 	TokAssign            // =						  17
-	TokUnknown           // Not specified type		  18
+	TokAttribute         // #[attr1 = 0]			  18
+	TokAtom              // :atom					  19
+	TokUnknown           // Not specified type		  20
 )
 
 type tokenType uint8
@@ -45,7 +47,9 @@ type Lexer struct {
 	LastChar      uint8
 	isEOF         bool
 	ignoreNewLine bool
-	IsFloat		  bool
+	ignoreSpace   bool
+	ignoreAtoms	  bool
+	IsFloat       bool
 }
 
 func (l *Lexer) nextChar() error {
@@ -59,7 +63,7 @@ func (l *Lexer) nextChar() error {
 }
 
 func (l *Lexer) removeSpace() (stopLexing bool) {
-	for l.LastChar == 32 || ((l.LastChar == 10 || l.LastChar == 13) && l.ignoreNewLine) || l.LastChar == '\t' {
+	for ((l.LastChar == 32 || l.LastChar == '\t') && l.ignoreSpace) || ((l.LastChar == 10 || l.LastChar == 13) && l.ignoreNewLine) {
 		if l.nextChar() != nil {
 			l.CurrentToken.kind = TokEOF
 			l.CurrentToken.val = -1
@@ -322,6 +326,69 @@ func (l *Lexer) isEqual() (stopLexing bool) {
 	return false
 }
 
+func (l *Lexer) isAttribute() (stopLexing bool) {
+	if l.LastChar == '#' {
+		if l.nextChar() != nil {
+			l.CurrentToken.kind = TokEOF
+			l.CurrentToken.val = -1
+			return true
+		}
+
+		if l.LastChar == '[' {
+			l.isEOF = l.nextChar() != nil
+			l.CurrentToken.kind = TokAttribute
+			l.CurrentToken.val = -1
+			return true
+		}
+	}
+
+	return false
+}
+
+func (l *Lexer) isAtom() (stopLexing bool) {
+	if l.LastChar == ':' {
+		oldToken := l.CurrentToken
+		oldChar := l.CurrentChar
+
+		l.ignoreSpace = false
+		l.ignoreNewLine = false
+
+		if l.nextChar() != nil {
+			l.CurrentToken.kind = TokEOF
+			l.CurrentToken.val = -1
+			l.ignoreSpace = true
+			l.ignoreNewLine = true
+			return true
+		}
+
+		atom := ""
+		for unicode.IsLetter(rune(l.LastChar)) || l.LastChar == '_' {
+			atom += string(rune(l.LastChar))
+
+			if l.nextChar() != nil {
+				break
+			}
+		}
+
+		l.ignoreSpace = true
+		l.ignoreNewLine = true
+
+		if atom == "" {
+			l.LastChar = ':'
+			l.CurrentToken = oldToken
+			l.CurrentChar = oldChar
+			return false
+		}
+
+		l.CurrentToken.kind = TokAtom
+		l.CurrentToken.val = -1
+		l.Identifier = ":" + atom
+		return true
+	}
+
+	return false
+}
+
 func (l *Lexer) NextToken() {
 	if l.isEOF {
 		l.CurrentToken.kind = TokEOF
@@ -330,6 +397,10 @@ func (l *Lexer) NextToken() {
 	}
 
 	if l.removeSpace() {
+		return
+	}
+
+	if l.isAttribute() {
 		return
 	}
 
@@ -351,6 +422,12 @@ func (l *Lexer) NextToken() {
 
 	if l.isEqual() {
 		return
+	}
+
+	if !l.ignoreAtoms {
+		if l.isAtom() {
+			return
+		}
 	}
 
 	if l.isComment() {

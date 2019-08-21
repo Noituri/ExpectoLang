@@ -1,15 +1,25 @@
 @printf(x: str): int
 @exit(x: int)
 
+#[primitive(type = :unary, precedence = 30)]
+fc ad(a: float): bool
+    if a == 1.0
+        return true
+    end
+
+    return false
+end
+
 fc main
     loop i, v in "IterThroughMe"
         .1 / 0.1
         printf("OWO\n")
     end
 
-    add(1.0, .1)
+    1.0
 
-    printf("Hi")
+    add(1.0, .1)
+    printf("Hi\n")
 end
 
 fc add(a: float, b: float): float

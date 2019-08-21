@@ -72,6 +72,8 @@ func handle(parser Parser, init bool) {
 		}
 	case TokExtern:
 		handleExtern(&parser, init)
+	case TokAttribute:
+		parser.parseAttribute()
 	default:
 		{
 			handleTopLevelExpression(&parser, init)

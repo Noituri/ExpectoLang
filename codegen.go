@@ -135,7 +135,7 @@ func (b *BinaryAST) codegen() llvm.Value {
 	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astString {
 		return b.strCodegen()
 	} else if b.Lhs.Kind() == astNumberFloat && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astNumberFloat {
-		return b.strCodegen()
+		return b.numberCodegen()
 	}
 
 	return b.numberCodegen()
@@ -195,6 +195,8 @@ func (p *PrototypeAST) codegen() llvm.Value {
 		fcType = llvm.FunctionType(llvm.VoidType(), args, false)
 	case LitInt:
 		fcType = llvm.FunctionType(llvm.Int32Type(), args, false)
+	case LitBool:
+		fcType = llvm.FunctionType(llvm.Int1Type(), args, false)
 	default:
 		panic(fmt.Sprintf("type-%s-does-no-exit", p.ReturnType))
 	}
