@@ -109,6 +109,8 @@ func (p *Parser) parseArgs(callee bool) []ArgsPrototype {
 
 // TODO: remove callee bool
 func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
+	p.lexer.ignoreAtoms = true
+
 	pos := p.lexer.CurrentChar
 	isOperator := p.isOperator
 	isBinOp := p.isBinaryOp
@@ -146,6 +148,8 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 
 		p.lexer.NextToken()
 	}
+
+	p.lexer.ignoreAtoms = false
 
 	return PrototypeAST{
 		position(pos),
