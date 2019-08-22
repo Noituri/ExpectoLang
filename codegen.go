@@ -46,7 +46,7 @@ func (v *VariableAST) codegen() llvm.Value {
 	return val
 }
 
-func (b *BinaryAST) numberCodegen() llvm.Value {
+func (b *BinaryAST) binOpNumberCodegen() llvm.Value {
 	l := b.Lhs.codegen()
 	r := b.Rhs.codegen()
 
@@ -106,7 +106,7 @@ func (b *BinaryAST) numberCodegen() llvm.Value {
 	}
 }
 
-func (b *BinaryAST) strCodegen() llvm.Value {
+func (b *BinaryAST) binOpStrCodegen() llvm.Value {
 	l := b.Lhs.codegen()
 	r := b.Rhs.codegen()
 
@@ -127,19 +127,63 @@ func (b *BinaryAST) strCodegen() llvm.Value {
 	}
 }
 
+//func (b *BinaryAST) codegen() llvm.Value {
+//	if b.Lhs.Kind() == astNumberFloat && b.Rhs.Kind() == astNumberFloat {
+//		return b.binOpNumberCodegen()
+//	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astString {
+//		return b.strCodegen()
+//	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astString {
+//		return b.strCodegen()
+//	} else if b.Lhs.Kind() == astNumberFloat && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astNumberFloat {
+//		return b.binOpNumberCodegen()
+//	}
+//
+//	return b.binOpNumberCodegen()
+//
+//}
+
 func (b *BinaryAST) codegen() llvm.Value {
-	if b.Lhs.Kind() == astNumberFloat && b.Rhs.Kind() == astNumberFloat {
-		return b.numberCodegen()
-	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astString {
-		return b.strCodegen()
-	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astString {
-		return b.strCodegen()
-	} else if b.Lhs.Kind() == astNumberFloat && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astNumberFloat {
-		return b.numberCodegen()
+	lKind := ""
+	rKind := ""
+
+	if b.Lhs.Kind() == astVariable {
+		v, ok := b.Lhs.(*VariableAST)
+		if !ok {
+			panic("Code Generation Error: Left side of binary operator supposed to be variable")
+		}
+
+		lKind = v.VarType
+	} else {
+		lKind = ASTTypeToLit(b.Lhs.Kind())
 	}
 
-	return b.numberCodegen()
+	if b.Rhs.Kind() == astVariable {
+		v, ok := b.Rhs.(*VariableAST)
+		if !ok {
+			panic("Code Generation Error: Right side of binary operator supposed to be variable")
+		}
 
+		rKind = v.VarType
+	} else {
+		rKind = ASTTypeToLit(b.Rhs.Kind())
+	}
+
+	if lKind == "" || rKind == "" {
+		panic("Code Generation Error: Couldn't extract type of the binary operator's sides")
+	}
+
+	if lKind != rKind {
+		panic("Error: Left and right side of the binary operator don't have the same type")
+	}
+
+	switch lKind {
+	case LitFloat:
+		return b.binOpNumberCodegen()
+	case LitString:
+		return b.binOpStrCodegen()
+	default:
+		panic("Error: '"+lKind+"' cannot be used with binary operator")
+	}
 }
 
 func (c *CallAST) codegen() llvm.Value {

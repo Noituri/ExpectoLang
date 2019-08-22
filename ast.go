@@ -66,7 +66,9 @@ type StringAST struct {
 type VariableAST struct {
 	position
 	kind
-	Name string
+	Name 	string
+	VarType string
+	Mutable bool
 }
 
 type ElifAST struct {

@@ -8,9 +8,10 @@ import (
 type Parser struct {
 	lexer             Lexer
 	defaultPrecedence int
-	isOperator		  bool
-	isBinaryOp		  bool
+	isOperator        bool
+	isBinaryOp        bool
 	binOpPrecedence   map[string]int
+	knownVars         map[string]string
 }
 
 func NewParser(data string) Parser {
@@ -20,7 +21,7 @@ func NewParser(data string) Parser {
 			CurrentChar:   -1,
 			LastChar:      32,
 			ignoreNewLine: true,
-			ignoreSpace: true,
+			ignoreSpace:   true,
 		},
 		binOpPrecedence: map[string]int{
 			"=":  2,
@@ -76,10 +77,18 @@ func (p *Parser) parseArgs(callee bool) []ArgsPrototype {
 
 				p.lexer.NextToken()
 
+				varType := p.getType(p.lexer.Identifier)
 				argsNames = append(argsNames, ArgsPrototype{
 					Name:    name,
-					ArgType: p.getType(p.lexer.Identifier),
+					ArgType: varType,
 				})
+
+				_, exist := p.knownVars[name]
+				if exist {
+					panic("Error: Variable with the same name already exist")
+				}
+
+				p.knownVars[name] = varType
 			}
 		} else if p.lexer.CurrentToken.kind == TokRParen {
 			if len(argsNames) == 0 {
@@ -166,6 +175,7 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 func (p *Parser) ParseFunction() (FunctionAST, error) {
 	pos := p.lexer.CurrentChar
 	p.lexer.NextToken()
+	p.knownVars = make(map[string]string)
 	proto, err := p.ParsePrototype(false)
 
 	if err != nil {
@@ -211,6 +221,7 @@ func (p *Parser) ParseFunction() (FunctionAST, error) {
 
 func (p *Parser) ParseExtern() (PrototypeAST, error) {
 	p.lexer.NextToken()
+	p.knownVars = make(map[string]string)
 	return p.ParsePrototype(false)
 }
 
@@ -386,7 +397,17 @@ func (p *Parser) parseIdentifier() AST {
 	p.lexer.NextToken()
 
 	if p.lexer.CurrentToken.kind != TokLParen {
-		return &VariableAST{position(pos), astVariable, name}
+		varType, ok := p.knownVars[name]
+		if !ok {
+			panic(fmt.Sprintf(`Error: Variable "%s" does not exist!`, name))
+		}
+
+		return &VariableAST{
+			position: position(pos),
+			kind:     astVariable,
+			Name:     name,
+			VarType: varType,
+		}
 	}
 
 	p.lexer.NextToken()
@@ -622,6 +643,7 @@ func (p *Parser) parseLoop() AST {
 				position: position(pos),
 				kind:     astVariable,
 				Name:     ind,
+				VarType:  LitBool,
 			},
 			"",
 			"",
@@ -675,7 +697,7 @@ func (p *Parser) parseAssign(panicMessage string) interface{} {
 	}
 
 	p.lexer.NextToken()
-	if p.lexer.CurrentToken.kind == TokIdentifier ||  p.lexer.CurrentToken.kind == TokAtom {
+	if p.lexer.CurrentToken.kind == TokIdentifier || p.lexer.CurrentToken.kind == TokAtom {
 		return p.lexer.Identifier
 	}
 
@@ -695,7 +717,7 @@ func (p *Parser) parsePrimitiveAttr() {
 	}
 
 	prevToken := 0
-	for ;; {
+	for ; ; {
 		if p.lexer.CurrentToken.kind == TokRParen {
 			break
 		}
@@ -725,7 +747,7 @@ func (p *Parser) parsePrimitiveAttr() {
 			case ":binary":
 				p.isBinaryOp = true
 			default:
-				panic("Syntax Error: Type '"+typ.(string)+"' in the primitive attribute does not exist")
+				panic("Syntax Error: Type '" + typ.(string) + "' in the primitive attribute does not exist")
 			}
 		case "precedence":
 			precedence, ok := p.parseAssign("Syntax Error: Invalid value assigning in the 'precedence' option of the primitive attribute").(float64)
@@ -754,7 +776,7 @@ func (p *Parser) parseAttribute() {
 
 	p.lexer.NextToken()
 
-	for ;; {
+	for ; ; {
 		if p.lexer.CurrentToken.val == ']' {
 			break
 		}

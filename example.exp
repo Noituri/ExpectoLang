@@ -16,8 +16,6 @@ fc main
         printf("OWO\n")
     end
 
-    1.0
-
     add(1.0, .1)
     printf("Hi\n")
 end
