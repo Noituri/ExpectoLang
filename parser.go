@@ -672,7 +672,27 @@ func (p *Parser) parseLoop() AST {
 		panic("Syntax Error: No condition after 'in' keyword")
 	}
 
+	// Shadowing variables
+	oldInd, okInd := p.knownVars[ind]
+	oldElement, okElem := p.knownVars[element]
+
+	p.knownVars[ind] = LitInt
+	p.knownVars[element] = ASTTypeToLit(cond.Kind())
+
 	body := p.parseLoopBody()
+
+	if okInd {
+		p.knownVars[ind] = oldInd
+	} else {
+		delete(p.knownVars, p.knownVars[ind])
+	}
+
+	if okElem {
+		p.knownVars[ind] = oldElement
+	} else {
+		delete(p.knownVars, p.knownVars[ind])
+	}
+
 	p.lexer.NextToken()
 
 	return &LoopAST{
