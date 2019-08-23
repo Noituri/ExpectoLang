@@ -2,13 +2,15 @@
 @exit(x: int)
 
 #[primitive(type = :unary, precedence = 30)]
-fc is_equal_one(a: float): bool
+fc ?(a: float): bool
     if a == 1.0
         return true
     end
 
     return false
 end
+
+
 
 fc main
     loop i, v in "IterThroughMe"

@@ -129,12 +129,56 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 	p.isBinaryOp = false
 	p.defaultPrecedence = 0
 
-	if p.lexer.CurrentToken.kind != TokIdentifier {
-		return PrototypeAST{}, errors.New("no-function-name")
-	}
+	funcName := ""
 
-	funcName := p.lexer.Identifier
-	p.lexer.NextToken()
+	switch p.lexer.CurrentToken.kind {
+	case TokIdentifier:
+		if isOperator {
+			panic("Error: Operator is not a special character")
+		}
+
+		funcName = p.lexer.Identifier
+		p.lexer.NextToken()
+	default:
+		if !isOperator {
+			panic("Error: Only operators can use special character")
+		}
+
+		if isBinOp {
+			funcName = "binary$"
+		} else {
+			funcName = "unary$"
+		}
+
+		p.lexer.ignoreNewLine = false
+		p.lexer.ignoreSpace = false
+		for ;; {
+			if p.lexer.CurrentToken.val == ' ' || p.lexer.CurrentToken.val == '\n'  || p.lexer.CurrentToken.kind == TokLParen {
+				break
+			}
+
+			if p.lexer.CurrentToken.val == -1 && p.lexer.CurrentToken.kind != TokAssign && p.lexer.CurrentToken.kind != TokEqual {
+				panic("Error: Invalid operator name")
+			}
+
+			if p.lexer.CurrentToken.kind == TokAssign {
+				funcName += "="
+			} else if p.lexer.CurrentToken.kind == TokEqual {
+				funcName += "=="
+			} else {
+				funcName += string(rune(p.lexer.CurrentToken.val))
+			}
+
+			p.lexer.NextToken()
+		}
+
+		p.lexer.ignoreNewLine = true
+		p.lexer.ignoreSpace = true
+
+		if p.lexer.CurrentToken.kind == TokUnknown {
+			p.lexer.NextToken()
+		}
+	}
 
 	argsNames := []ArgsPrototype{}
 	if p.lexer.CurrentToken.kind == TokLParen {
@@ -353,8 +397,12 @@ func (p *Parser) ParsePrimary() AST {
 		panic("Syntax Error: Extra end")
 	case TokRParen:
 		panic("Syntax Error: Invalid use of ')'")
+	case TokEqual:
+		panic("Syntax Error: Invalid use of '=='")
+	case TokAssign:
+		panic("Syntax Error: Invalid use of '='")
 	default:
-		println("NUL", p.lexer.CurrentToken.kind, string(rune(p.lexer.CurrentToken.val)))
+		println("NUL", p.lexer.CurrentToken.kind, string(rune(p.lexer.CurrentToken.val)), p.lexer.CurrentToken.val)
 		p.lexer.NextToken()
 		return nil
 	}

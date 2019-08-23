@@ -245,7 +245,6 @@ func (l *Lexer) isComment() (stopLexing bool) {
 func (l *Lexer) isParen() (stopLexing bool) {
 	if l.LastChar == '(' {
 		l.isEOF = l.nextChar() != nil
-
 		l.CurrentToken.kind = TokLParen
 		l.CurrentToken.val = -1
 		return true
@@ -253,7 +252,6 @@ func (l *Lexer) isParen() (stopLexing bool) {
 
 	if l.LastChar == ')' {
 		l.isEOF = l.nextChar() != nil
-
 		l.CurrentToken.kind = TokRParen
 		l.CurrentToken.val = -1
 		return true
@@ -311,7 +309,6 @@ func (l *Lexer) isEqual() (stopLexing bool) {
 		}
 
 		if l.LastChar != '=' {
-			l.isEOF = l.nextChar() != nil
 			l.CurrentToken.kind = TokAssign
 			l.CurrentToken.val = -1
 			return true

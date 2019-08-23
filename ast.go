@@ -18,7 +18,6 @@ const (
 	astIfElse
 	astReturn
 	astLoop
-	astAttribute
 )
 
 type AST interface {
