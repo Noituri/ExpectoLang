@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+var BinOpLookup = make(map[string][]ArgsPrototype)
+
 type Parser struct {
 	lexer             Lexer
 	defaultPrecedence int
@@ -144,12 +146,6 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 			panic("Error: Only operators can use special character")
 		}
 
-		if isBinOp {
-			funcName = "binary$"
-		} else {
-			funcName = "unary$"
-		}
-
 		p.lexer.ignoreNewLine = false
 		p.lexer.ignoreSpace = false
 		for ;; {
@@ -175,6 +171,16 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 		p.lexer.ignoreNewLine = true
 		p.lexer.ignoreSpace = true
 
+		if isBinOp {
+			p.binOpPrecedence[funcName] = defPrecedence
+		}
+
+		if isBinOp {
+			funcName = "binary$" + funcName
+		} else {
+			funcName = "unary$" + funcName
+		}
+
 		if p.lexer.CurrentToken.kind == TokUnknown {
 			p.lexer.NextToken()
 		}
@@ -187,6 +193,18 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 			return PrototypeAST{}, errors.New(")-expected")
 		}
 		p.lexer.NextToken()
+	}
+
+	if isOperator && isBinOp && len(argsNames) != 2 {
+		panic("Error: Wrong number of arguments in the binary operator (" + funcName + ")")
+	}
+
+	if isOperator && !isBinOp && len(argsNames) != 1 {
+		panic("Error: Wrong number of arguments in the unary operator (" + funcName + ")")
+	}
+
+	if isBinOp {
+		BinOpLookup[funcName] = argsNames
 	}
 
 	returnType := LitVoid

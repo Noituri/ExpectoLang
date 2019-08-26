@@ -127,21 +127,6 @@ func (b *BinaryAST) binOpStrCodegen() llvm.Value {
 	}
 }
 
-//func (b *BinaryAST) codegen() llvm.Value {
-//	if b.Lhs.Kind() == astNumberFloat && b.Rhs.Kind() == astNumberFloat {
-//		return b.binOpNumberCodegen()
-//	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astString {
-//		return b.strCodegen()
-//	} else if b.Lhs.Kind() == astString && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astString {
-//		return b.strCodegen()
-//	} else if b.Lhs.Kind() == astNumberFloat && b.Rhs.Kind() == astVariable || b.Lhs.Kind() == astVariable && b.Rhs.Kind() == astNumberFloat {
-//		return b.binOpNumberCodegen()
-//	}
-//
-//	return b.binOpNumberCodegen()
-//
-//}
-
 func (b *BinaryAST) codegen() llvm.Value {
 	lKind := ""
 	rKind := ""
@@ -170,6 +155,30 @@ func (b *BinaryAST) codegen() llvm.Value {
 
 	if lKind == "" || rKind == "" {
 		panic("Code Generation Error: Couldn't extract type of the binary operator's sides")
+	}
+
+	binOp, ok := BinOpLookup["binary$" + b.Op]
+	if ok {
+		lOk := lKind == binOp[0].ArgType
+		rOk := rKind == binOp[1].ArgType
+
+		if lOk && rOk {
+			callee := module.NamedFunction("binary$" + b.Op)
+			if callee.IsNil() {
+				panic(fmt.Sprintf(`Function "%s" could not be referenced`, b.Op))
+			}
+
+			if callee.ParamsCount() != 2 {
+				panic(fmt.Sprintf(`Incorrect arguments passed in the function "%s"`, b.Op))
+			}
+
+			argsValues := []llvm.Value{
+				b.Lhs.codegen(),
+				b.Rhs.codegen(),
+			}
+
+			return builder.CreateCall(callee, argsValues, "")
+		}
 	}
 
 	if lKind != rKind {

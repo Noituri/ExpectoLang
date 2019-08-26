@@ -1,9 +1,13 @@
 @printf(x: str): int
 @exit(x: int)
 
-#[primitive(type = :unary, precedence = 30)]
-fc ?(a: float): bool
+#[primitive(type = :binary, precedence = 30)]
+fc ?(a: float, b: float): bool
     if a == 1.0
+        if b == 0.0
+            return true
+        end
+
         return true
     end
 
@@ -16,6 +20,8 @@ fc main
     loop i, v in "IterThroughMe"
         printf(v)
     end
+
+    1.0 ? 0.0
 
     add(1.0, 0.1)
     printf("Hi\n")
