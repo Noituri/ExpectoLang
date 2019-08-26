@@ -8,20 +8,22 @@ fc ?(a: float, b: float): bool
             return true
         end
 
-        return true
+        return false
     end
 
     return false
 end
 
-
-
 fc main
-    loop i, v in "IterThroughMe"
+    loop i, v in "IterThroughMe\n"
         printf(v)
     end
 
-    1.0 ? 0.0
+    if 1.0 ? 0.0
+        printf("true\n")
+    else
+        printf("false\n")
+    end
 
     add(1.0, 0.1)
     printf("Hi\n")
