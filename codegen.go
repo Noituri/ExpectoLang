@@ -46,10 +46,7 @@ func (v *VariableAST) codegen() llvm.Value {
 	return val
 }
 
-func (b *BinaryAST) binOpNumberCodegen() llvm.Value {
-	l := b.Lhs.codegen()
-	r := b.Rhs.codegen()
-
+func (b *BinaryAST) binOpNumberCodegen(l, r llvm.Value) llvm.Value {
 	if l.IsNil() || r.IsNil() {
 		panic("null operands")
 	}
@@ -106,10 +103,7 @@ func (b *BinaryAST) binOpNumberCodegen() llvm.Value {
 	}
 }
 
-func (b *BinaryAST) binOpStrCodegen() llvm.Value {
-	l := b.Lhs.codegen()
-	r := b.Rhs.codegen()
-
+func (b *BinaryAST) binOpStrCodegen(l, r llvm.Value) llvm.Value {
 	if l.IsNil() || r.IsNil() {
 		panic("null operands")
 	}
@@ -127,35 +121,50 @@ func (b *BinaryAST) binOpStrCodegen() llvm.Value {
 	}
 }
 
+//func (b *BinaryAST) getKinds() (lKind string, rKind string) {
+//	if b.Lhs.Kind() == astVariable {
+//		v, ok := b.Lhs.(*VariableAST)
+//		if !ok {
+//			panic("Code Generation Error: Left side of binary operator supposed to be variable")
+//		}
+//
+//		lKind = v.VarType
+//	} else {
+//		lKind = ASTTypeToLit(b.Lhs.Kind())
+//	}
+//
+//	if b.Rhs.Kind() == astVariable {
+//		v, ok := b.Rhs.(*VariableAST)
+//		if !ok {
+//			panic("Code Generation Error: Right side of binary operator supposed to be variable")
+//		}
+//
+//		rKind = v.VarType
+//	} else {
+//		rKind = ASTTypeToLit(b.Rhs.Kind())
+//	}
+//
+//	if lKind == "" || rKind == "" {
+//		panic("Code Generation Error: Couldn't extract type of the binary operator's sides")
+//	}
+//	//
+//	//if lKind == "BINARY" {
+//	//	b.Lhs.codegen()
+//	//}
+//	//
+//	//if rKind == "BINARY" {
+//	//	b.Rhs.codegen()
+//	//}
+//
+//	return
+//}
+
 func (b *BinaryAST) codegen() llvm.Value {
-	lKind := ""
-	rKind := ""
+	l := b.Lhs.codegen()
+	lKind := LLVMTypeToLit(l.Type())
 
-	if b.Lhs.Kind() == astVariable {
-		v, ok := b.Lhs.(*VariableAST)
-		if !ok {
-			panic("Code Generation Error: Left side of binary operator supposed to be variable")
-		}
-
-		lKind = v.VarType
-	} else {
-		lKind = ASTTypeToLit(b.Lhs.Kind())
-	}
-
-	if b.Rhs.Kind() == astVariable {
-		v, ok := b.Rhs.(*VariableAST)
-		if !ok {
-			panic("Code Generation Error: Right side of binary operator supposed to be variable")
-		}
-
-		rKind = v.VarType
-	} else {
-		rKind = ASTTypeToLit(b.Rhs.Kind())
-	}
-
-	if lKind == "" || rKind == "" {
-		panic("Code Generation Error: Couldn't extract type of the binary operator's sides")
-	}
+	r := b.Rhs.codegen()
+	rKind := LLVMTypeToLit(r.Type())
 
 	binOp, ok := BinOpLookup["binary$" + b.Op]
 	if ok {
@@ -187,9 +196,9 @@ func (b *BinaryAST) codegen() llvm.Value {
 
 	switch lKind {
 	case LitFloat:
-		return b.binOpNumberCodegen()
+		return b.binOpNumberCodegen(l, r)
 	case LitString:
-		return b.binOpStrCodegen()
+		return b.binOpStrCodegen(l, r)
 	default:
 		panic("Error: '"+lKind+"' cannot be used with binary operator")
 	}

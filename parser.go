@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var BinOpLookup = make(map[string][]ArgsPrototype)
@@ -148,8 +149,8 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 
 		p.lexer.ignoreNewLine = false
 		p.lexer.ignoreSpace = false
-		for ;; {
-			if p.lexer.CurrentToken.val == ' ' || p.lexer.CurrentToken.val == '\n'  || p.lexer.CurrentToken.kind == TokLParen {
+		for ; ; {
+			if p.lexer.CurrentToken.val == ' ' || p.lexer.CurrentToken.val == '\n' || p.lexer.CurrentToken.kind == TokLParen {
 				break
 			}
 
@@ -331,18 +332,47 @@ func (p *Parser) ParseExpression() AST {
 }
 
 func (p *Parser) checkBinOpPrec() (int, bool, string) {
-	switch p.lexer.CurrentToken.kind {
-	case TokAssign:
-		prec, ok := p.binOpPrecedence["="]
-		return prec, ok, "="
-	case TokEqual:
-		prec, ok := p.binOpPrecedence["=="]
-		return prec, ok, "=="
-	default:
-		val := string(rune(p.lexer.CurrentToken.val))
-		prec, ok := p.binOpPrecedence[val]
-		return prec, ok, val
+	operator := ""
+	charCount := p.lexer.CurrentChar
+	token := p.lexer.CurrentToken
+	lastChar := p.lexer.LastChar
+
+	for ;; {
+		isMatch := false
+		tempOp := ""
+
+		switch p.lexer.CurrentToken.kind {
+		case TokAssign:
+			tempOp += "="
+		case TokEqual:
+			tempOp += "=="
+		default:
+			tempOp += string(rune(p.lexer.CurrentToken.val))
+		}
+
+		for k, _ := range p.binOpPrecedence {
+			if strings.HasPrefix(k, tempOp) {
+				isMatch = true
+				charCount = p.lexer.CurrentChar
+				token = p.lexer.CurrentToken
+				lastChar = p.lexer.LastChar
+				break
+			}
+		}
+
+		if !isMatch {
+			p.lexer.CurrentChar = charCount
+			p.lexer.CurrentToken = token
+			p.lexer.LastChar = lastChar
+			break
+		}
+
+		operator += tempOp
+		p.lexer.NextToken()
 	}
+
+	prec, ok := p.binOpPrecedence[operator]
+	return prec, ok, operator
 }
 
 func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
@@ -359,7 +389,6 @@ func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 		}
 
 		p.lexer.NextToken()
-
 		rhs := p.ParsePrimary()
 
 		if rhs == nil {
@@ -472,7 +501,7 @@ func (p *Parser) parseIdentifier() AST {
 			position: position(pos),
 			kind:     astVariable,
 			Name:     name,
-			VarType: varType,
+			VarType:  varType,
 		}
 	}
 
