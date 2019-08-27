@@ -121,43 +121,20 @@ func (b *BinaryAST) binOpStrCodegen(l, r llvm.Value) llvm.Value {
 	}
 }
 
-//func (b *BinaryAST) getKinds() (lKind string, rKind string) {
-//	if b.Lhs.Kind() == astVariable {
-//		v, ok := b.Lhs.(*VariableAST)
-//		if !ok {
-//			panic("Code Generation Error: Left side of binary operator supposed to be variable")
-//		}
-//
-//		lKind = v.VarType
-//	} else {
-//		lKind = ASTTypeToLit(b.Lhs.Kind())
-//	}
-//
-//	if b.Rhs.Kind() == astVariable {
-//		v, ok := b.Rhs.(*VariableAST)
-//		if !ok {
-//			panic("Code Generation Error: Right side of binary operator supposed to be variable")
-//		}
-//
-//		rKind = v.VarType
-//	} else {
-//		rKind = ASTTypeToLit(b.Rhs.Kind())
-//	}
-//
-//	if lKind == "" || rKind == "" {
-//		panic("Code Generation Error: Couldn't extract type of the binary operator's sides")
-//	}
-//	//
-//	//if lKind == "BINARY" {
-//	//	b.Lhs.codegen()
-//	//}
-//	//
-//	//if rKind == "BINARY" {
-//	//	b.Rhs.codegen()
-//	//}
-//
-//	return
-//}
+func (b *BinaryAST) binOpBoolCodegen(l, r llvm.Value) llvm.Value {
+	if l.IsNil() || r.IsNil() {
+		panic("null operands")
+	}
+
+	switch b.Op {
+	case "!=":
+		return builder.CreateICmp(llvm.IntNE, l, r, "cmptmp")
+	case "==":
+		return builder.CreateICmp(llvm.IntEQ, l, r, "cmptmp")
+	default:
+		panic(fmt.Sprintf(`Operator "%c" is invalid`, b.Op))
+	}
+}
 
 func (b *BinaryAST) codegen() llvm.Value {
 	l := b.Lhs.codegen()
@@ -166,7 +143,7 @@ func (b *BinaryAST) codegen() llvm.Value {
 	r := b.Rhs.codegen()
 	rKind := LLVMTypeToLit(r.Type())
 
-	binOp, ok := BinOpLookup["binary$" + b.Op]
+	binOp, ok := BinOpLookup["binary$"+b.Op]
 	if ok {
 		lOk := lKind == binOp[0].ArgType
 		rOk := rKind == binOp[1].ArgType
@@ -199,9 +176,25 @@ func (b *BinaryAST) codegen() llvm.Value {
 		return b.binOpNumberCodegen(l, r)
 	case LitString:
 		return b.binOpStrCodegen(l, r)
+	case LitBool:
+		return b.binOpBoolCodegen(l, r)
 	default:
-		panic("Error: '"+lKind+"' cannot be used with binary operator")
+		panic("Error: '" + lKind + "' cannot be used with binary operator")
 	}
+}
+
+func (u *UnaryAST) codegen() llvm.Value {
+	operand := u.Operand.codegen()
+	if operand.IsNil() {
+		panic("Error: Unary operand does not exist")
+	}
+
+	callee := module.NamedFunction("unary$" + string(rune(u.Operator)))
+	if callee.IsNil() {
+		panic("Error: Unary operator '" + string(rune(u.Operator)) + "' does not exist")
+	}
+
+	return builder.CreateCall(callee, []llvm.Value{operand}, "")
 }
 
 func (c *CallAST) codegen() llvm.Value {
@@ -355,7 +348,7 @@ func (i *IfElseAST) codegen() llvm.Value {
 			panic("No condition in elif")
 		}
 
-		if ind == len(i.ElifBody) - 1 {
+		if ind == len(i.ElifBody)-1 {
 			builder.CreateCondBr(elifCond, elifThenBlock, elseBlock)
 		} else {
 			builder.CreateCondBr(elifCond, elifThenBlock, elifElseBlock)
@@ -369,7 +362,7 @@ func (i *IfElseAST) codegen() llvm.Value {
 		}
 
 		builder.SetInsertPointAtEnd(elifElseBlock)
-		if ind == len(i.ElifBody) - 1 {
+		if ind == len(i.ElifBody)-1 {
 			builder.CreateBr(exitBlock)
 		}
 	}

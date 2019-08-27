@@ -13,12 +13,21 @@ fc ?(a: float, b: float): bool
 end
 
 #[primitive(type = :binary, precedence = 8)]
-fc &&(a: float, b: float): bool
+fc &&(a: bool, b: bool): bool
     if a == b
         return true
     end
 
     return false
+end
+
+#[primitive(type = :unary, precedence = 8)]
+fc !(a: bool): bool
+    if a
+        return false
+    end
+
+    return true
 end
 
 fc main
@@ -27,7 +36,12 @@ fc main
         printf(v)
     end
 */
-    if 1.0 && 1.0
+    !!true
+
+/* TODO: this won't work because unaryParse treats & as unary operator
+    if 1.0 == 0.1 && 1.0 == 0.1
+*/
+    if !false && 1.0 == 1.0
         printf("true\n")
     else
         printf("false\n")

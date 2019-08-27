@@ -18,6 +18,7 @@ const (
 	astIfElse
 	astReturn
 	astLoop
+	astUnary
 )
 
 type AST interface {
@@ -50,6 +51,13 @@ type BinaryAST struct {
 	Lhs, Rhs AST
 }
 
+type UnaryAST struct {
+	position
+	kind
+	Operator int
+	Operand  AST
+}
+
 type BoolAST struct {
 	position
 	kind
@@ -65,7 +73,7 @@ type StringAST struct {
 type VariableAST struct {
 	position
 	kind
-	Name 	string
+	Name    string
 	VarType string
 	Mutable bool
 }
@@ -74,7 +82,7 @@ type ElifAST struct {
 	position
 	kind
 	Condition AST
-	Body 	  BlockAST
+	Body      BlockAST
 }
 
 type IfElseAST struct {
@@ -89,7 +97,7 @@ type IfElseAST struct {
 type LoopAST struct {
 	position
 	kind
-	forIn	   bool
+	forIn      bool
 	Condition  AST
 	IndexVar   string
 	ElementVar string
@@ -104,9 +112,9 @@ type CallAST struct {
 }
 
 type ReturnAST struct {
-	 position
-	 kind
-	 Body AST
+	position
+	kind
+	Body AST
 }
 
 type BlockAST struct {

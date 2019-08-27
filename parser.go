@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 var BinOpLookup = make(map[string][]ArgsPrototype)
@@ -174,6 +175,10 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 
 		if isBinOp {
 			p.binOpPrecedence[funcName] = defPrecedence
+		} else {
+			if len(funcName) != 1 {
+				panic("Error: Unary operator can only have one character name")
+			}
 		}
 
 		if isBinOp {
@@ -322,7 +327,7 @@ func (p *Parser) ParseTopLevelExpr() (FunctionAST, error) {
 }
 
 func (p *Parser) ParseExpression() AST {
-	lhs := p.ParsePrimary()
+	lhs := p.parseUnary()
 
 	if lhs == nil {
 		return nil
@@ -389,7 +394,7 @@ func (p *Parser) ParseBinOpRHS(expressionPrec int, lhs AST) AST {
 		}
 
 		p.lexer.NextToken()
-		rhs := p.ParsePrimary()
+		rhs := p.parseUnary()
 
 		if rhs == nil {
 			return nil
@@ -918,4 +923,30 @@ func (p *Parser) parseAttribute() {
 	}
 
 	p.lexer.NextToken()
+}
+
+func (p *Parser) parseUnary() AST {
+	pos := p.lexer.CurrentChar
+	if unicode.IsLetter(rune(p.lexer.CurrentToken.val)) || p.lexer.CurrentToken.val == -1 || p.lexer.CurrentToken.kind == TokLParen || p.lexer.CurrentToken.val == ',' {
+		if p.lexer.CurrentToken.kind != TokAssign {
+			return p.ParsePrimary()
+		}
+	}
+
+	unaryOp := p.lexer.CurrentToken.val
+	if p.lexer.CurrentToken.kind == TokAssign {
+		unaryOp = '='
+	}
+
+	p.lexer.NextToken()
+	if op := p.parseUnary(); op != nil {
+		return &UnaryAST{
+			position: position(pos),
+			kind:     astUnary,
+			Operator: unaryOp,
+			Operand:  op,
+		}
+	}
+
+	return nil
 }
