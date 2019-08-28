@@ -30,7 +30,7 @@ func handleExtern(parser *Parser, init bool) {
 		panic("Extern Parse Error: " + err.Error())
 	}
 
-	if !init {
+	if init {
 		externIR := protoAST.codegen()
 		if externIR.IsNil() {
 			panic("Extern CodeGen Error: Could not create IR")
@@ -57,35 +57,13 @@ func handle(parser Parser, init bool) {
 	case TokEOF:
 		return
 	case TokFunction:
-		{
-			handleFunction(&parser, init)
-			//fun, err := parser.ParseFunction()
-			//
-			//if err != nil {
-			//	println("Error: ", err.Error())
-			//	return
-			//}
-			//
-			//b := &bytes.Buffer{}
-			//memviz.Map(b, &fun)
-			//println(b.String())
-		}
+		handleFunction(&parser, init)
 	case TokExtern:
 		handleExtern(&parser, init)
 	case TokAttribute:
 		parser.parseAttribute()
 	default:
-		{
-			handleTopLevelExpression(&parser, init)
-			//fun, err := parser.ParseTopLevelExpr()
-			//if err != nil {
-			//	handle(parser)
-			//	return
-			//}
-			//b := &bytes.Buffer{}
-			//memviz.Map(b, &fun)
-			//println(b.String())
-		}
+		handleTopLevelExpression(&parser, init)
 	}
 
 	handle(parser, init)
@@ -101,7 +79,7 @@ func main() {
 	parser.lexer.NextToken()
 	InitModuleAndPassManager()
 
-	//handle(parser, true)
+	handle(parser, true)
 	handle(parser, false)
 	if llvm.VerifyModule(module, llvm.PrintMessageAction) != nil {
 		panic("Failed to verify module")
