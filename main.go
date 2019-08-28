@@ -14,7 +14,7 @@ func handleFunction(parser *Parser, init bool) {
 	if init {
 		protoIR := functionAST.Proto.codegen()
 		if protoIR.IsNil() {
-			panic("Extern CodeGen Error: Could not create IR")
+			panic("Proto CodeGen Error: Could not create IR")
 		}
 	} else {
 		fcIR := functionAST.codegen()
@@ -30,7 +30,7 @@ func handleExtern(parser *Parser, init bool) {
 		panic("Extern Parse Error: " + err.Error())
 	}
 
-	if init {
+	if !init {
 		externIR := protoAST.codegen()
 		if externIR.IsNil() {
 			panic("Extern CodeGen Error: Could not create IR")
@@ -101,7 +101,7 @@ func main() {
 	parser.lexer.NextToken()
 	InitModuleAndPassManager()
 
-	handle(parser, true)
+	//handle(parser, true)
 	handle(parser, false)
 	if llvm.VerifyModule(module, llvm.PrintMessageAction) != nil {
 		panic("Failed to verify module")

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -182,9 +183,9 @@ func (p *Parser) ParsePrototype(callee bool) (PrototypeAST, error) {
 		}
 
 		if isBinOp {
-			funcName = "binary$" + funcName
+			funcName = "binary_" + funcName
 		} else {
-			funcName = "unary$" + funcName
+			funcName = "unary_" + funcName
 		}
 
 		if p.lexer.CurrentToken.kind == TokUnknown {
@@ -928,18 +929,14 @@ func (p *Parser) parseAttribute() {
 func (p *Parser) parseUnary() AST {
 	pos := p.lexer.CurrentChar
 	if unicode.IsLetter(rune(p.lexer.CurrentToken.val)) || p.lexer.CurrentToken.val == -1 || p.lexer.CurrentToken.kind == TokLParen || p.lexer.CurrentToken.val == ',' {
-		if p.lexer.CurrentToken.kind != TokAssign {
-			return p.ParsePrimary()
-		}
+		return p.ParsePrimary()
 	}
 
 	unaryOp := p.lexer.CurrentToken.val
-	if p.lexer.CurrentToken.kind == TokAssign {
-		unaryOp = '='
-	}
 
 	p.lexer.NextToken()
 	if op := p.parseUnary(); op != nil {
+		time.Sleep(5 * time.Second)
 		return &UnaryAST{
 			position: position(pos),
 			kind:     astUnary,

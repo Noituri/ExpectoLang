@@ -98,6 +98,8 @@ func (b *BinaryAST) binOpNumberCodegen(l, r llvm.Value) llvm.Value {
 		return builder.CreateFCmp(llvm.FloatOLT, l, r, "cmptmp")
 	case "==":
 		return builder.CreateFCmp(llvm.FloatOEQ, l, r, "cmptmp")
+	case "!=":
+		return builder.CreateFCmp(llvm.FloatONE, l, r, "cmptmp")
 	default:
 		panic(fmt.Sprintf(`Operator "%c" is invalid`, b.Op))
 	}
@@ -143,13 +145,13 @@ func (b *BinaryAST) codegen() llvm.Value {
 	r := b.Rhs.codegen()
 	rKind := LLVMTypeToLit(r.Type())
 
-	binOp, ok := BinOpLookup["binary$"+b.Op]
+	binOp, ok := BinOpLookup["binary_"+b.Op]
 	if ok {
 		lOk := lKind == binOp[0].ArgType
 		rOk := rKind == binOp[1].ArgType
 
 		if lOk && rOk {
-			callee := module.NamedFunction("binary$" + b.Op)
+			callee := module.NamedFunction("binary_" + b.Op)
 			if callee.IsNil() {
 				panic(fmt.Sprintf(`Function "%s" could not be referenced`, b.Op))
 			}
@@ -158,10 +160,7 @@ func (b *BinaryAST) codegen() llvm.Value {
 				panic(fmt.Sprintf(`Incorrect arguments passed in the function "%s"`, b.Op))
 			}
 
-			argsValues := []llvm.Value{
-				b.Lhs.codegen(),
-				b.Rhs.codegen(),
-			}
+			argsValues := []llvm.Value{l, r}
 
 			return builder.CreateCall(callee, argsValues, "")
 		}
@@ -189,7 +188,7 @@ func (u *UnaryAST) codegen() llvm.Value {
 		panic("Error: Unary operand does not exist")
 	}
 
-	callee := module.NamedFunction("unary$" + string(rune(u.Operator)))
+	callee := module.NamedFunction("unary_" + string(rune(u.Operator)))
 	if callee.IsNil() {
 		panic("Error: Unary operator '" + string(rune(u.Operator)) + "' does not exist")
 	}
@@ -275,13 +274,13 @@ func (b *BlockAST) codegen() ([]llvm.Value, bool) {
 			break
 		}
 	}
+
 	return elements, isReturn
 }
 
 // TODO Check for redefinition
 func (p *FunctionAST) codegen() llvm.Value {
 	fc := module.NamedFunction(p.Proto.Name)
-
 	if fc.IsNil() {
 		fc = p.Proto.codegen()
 	}
