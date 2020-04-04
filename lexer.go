@@ -11,56 +11,59 @@ import (
 type Token int
 
 const (
-	TokEOF Token = iota // End of string/file
-	TokIdentifier 		// Identifier
-	TokNumber     		// number
-	TokStr        		// string
-	TokLParen     		// (
-	TokRParen     		// )
-	TokLBrace			// {
-	TokRBrace			// }
-	TokEqual      		// ==
-	TokAssign     		// =
-	TokAttribute  		// #[attr1 = 0]
-	TokAtom       		// :atom
+	TokEOF        Token = iota // End of string/file
+	TokIdentifier              // Identifier
+	TokNumber                  // number
+	TokStr                     // string
+	TokLParen                  // (
+	TokRParen                  // )
+	TokLBrace                  // {
+	TokRBrace                  // }
+	TokEqual                   // ==
+	TokAssign                  // =
+	TokTypeSpec				   // : Used for specifying a type
+	TokArgSep				   // , arg separator
+	TokAttribute               // #[attr1 = 0]
+	TokAtom                    // :atom
 
 	KWBegin
-	TokIn         		// loop - element in array
-	TokForLoop          // for/while/foreach loop
-	TokElse       		// If else
-	TokIf         		// If
-	TokFalse			// boolean false
-	TokTrue				// boolean true
-	TokExtern     		// extern procedure
-	TokUnknown    		// Not specified type
-	TokReturn     		// procedure return
-	TokFunction   		// function
+	TokIn       // loop - element in array
+	TokForLoop  // for/while/foreach loop
+	TokElse     // If else
+	TokIf       // If
+	TokFalse    // boolean false
+	TokTrue     // boolean true
+	TokExtern   // extern procedure
+	TokUnknown  // Not specified type
+	TokReturn   // procedure return
+	TokFunction // function
 	KWEnd
 )
 
-var tokens = map[Token]string {
-	TokAtom: "ATOM",
-	TokUnknown: "UNKNOWN",
-	TokEOF: "EOF",
+var tokens = map[Token]string{
+	TokAtom:       "ATOM",
+	TokUnknown:    "UNKNOWN",
+	TokEOF:        "EOF",
 	TokIdentifier: "IDENT",
-	TokNumber: "NUMBER",
-	TokStr: "STRING",
-	TokAttribute: "ATTRIBUTE",
-	TokExtern: "@",
-	TokFunction: "fun",
-	TokReturn: "return",
-	TokTrue: "true",
-	TokFalse: "false",
-	TokIf: "if",
-	TokElse: "else",
-	TokForLoop: "for",
-	TokIn: "in",
-	TokLParen: "(",
-	TokRParen: ")",
-	TokLBrace: "{",
-	TokRBrace: "}",
-	TokEqual: "==",
-	TokAssign: "=",
+	TokNumber:     "NUMBER",
+	TokStr:        "STRING",
+	TokAttribute:  "ATTRIBUTE",
+	TokExtern:     "@",
+	TokFunction:   "fun",
+	TokReturn:     "return",
+	TokTrue:       "true",
+	TokFalse:      "false",
+	TokIf:         "if",
+	TokElse:       "else",
+	TokForLoop:    "for",
+	TokIn:         "in",
+	TokLParen:     "(",
+	TokRParen:     ")",
+	TokLBrace:     "{",
+	TokRBrace:     "}",
+	TokEqual:      "==",
+	TokAssign:     "=",
+	TokTypeSpec:   ":",
 }
 
 var keywords map[string]Token
@@ -81,14 +84,14 @@ func Lookup(identifier string) Token {
 
 type Lexer struct {
 	source        string
-	token	 	  Token
+	token         Token
 	identifier    string
+	unknownVal    rune
 	numVal        float64
 	strVal        string
-	offsetChar	  int
+	offsetChar    int
 	forwardOffset int
-	line		  int
-	col			  int
+	pos           Pos
 	lastChar      rune
 	isEOF         bool
 	ignoreNewLine bool
@@ -97,12 +100,14 @@ type Lexer struct {
 	isFloat       bool
 }
 
-func (l Lexer) New(source string) Lexer {
+func NewLexer(source string) Lexer {
 	lexer := Lexer{
-		source: source,
-		offsetChar: 0,
+		source:        source,
+		offsetChar:    0,
 		forwardOffset: 0,
-		line: 1,
+		pos:           Pos{col: 1, row: 1},
+		ignoreNewLine: true,
+		ignoreSpace:   true,
 	}
 	_ = lexer.nextChar()
 	if lexer.lastChar == 0xFEFF {
@@ -116,10 +121,10 @@ func (l *Lexer) nextChar() error {
 	if l.forwardOffset < len(l.source) {
 		l.offsetChar = l.forwardOffset
 		if l.lastChar == '\n' {
-			l.col = 0
-			l.line++
+			l.pos.col = 0
+			l.pos.row++
 		}
-		l.col++
+		l.pos.col++
 		ch := rune(l.source[l.forwardOffset])
 		addOffset := 1
 		if ch == 0 {
@@ -163,13 +168,14 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 	if unicode.IsLetter(l.lastChar) {
 		l.identifier = string(l.lastChar)
 
-
+		if l.nextChar() != nil {
+			return true
+		}
 		for unicode.IsLetter(l.lastChar) || l.lastChar == '_' {
+			l.identifier += string(l.lastChar)
 			if l.nextChar() != nil {
 				break
 			}
-			l.identifier += string(l.lastChar)
-
 		}
 
 		l.token = Lookup(l.identifier)
@@ -227,7 +233,7 @@ func (l *Lexer) isComment() (stopLexing bool) {
 				}
 			}
 
-			l.NextToken()
+			l.nextToken()
 			return true
 		} else if ch == '*' {
 			for {
@@ -252,7 +258,7 @@ func (l *Lexer) isComment() (stopLexing bool) {
 				}
 			}
 
-			l.NextToken()
+			l.nextToken()
 			return true
 		}
 	}
@@ -269,6 +275,22 @@ func (l *Lexer) isParen() (stopLexing bool) {
 	if l.lastChar == ')' {
 		l.isEOF = l.nextChar() != nil
 		l.token = TokRParen
+		return true
+	}
+
+	return false
+}
+
+func (l *Lexer) isBrace() (stopLexing bool) {
+	if l.lastChar == '{' {
+		l.isEOF = l.nextChar() != nil
+		l.token = TokLBrace
+		return true
+	}
+
+	if l.lastChar == '}' {
+		l.isEOF = l.nextChar() != nil
+		l.token = TokRBrace
 		return true
 	}
 
@@ -325,6 +347,26 @@ func (l *Lexer) isEqual() (stopLexing bool) {
 
 		l.isEOF = l.nextChar() != nil
 		l.token = TokEqual
+		return true
+	}
+
+	return false
+}
+
+func (l *Lexer) isTypeSpec() (stopLexing bool) {
+	if l.lastChar == ':' {
+		l.isEOF = l.nextChar() != nil
+		l.token = TokTypeSpec
+		return true
+	}
+
+	return false
+}
+
+func (l *Lexer) isArgSep() (stopLexing bool) {
+	if l.lastChar == ',' {
+		l.isEOF = l.nextChar() != nil
+		l.token = TokArgSep
 		return true
 	}
 
@@ -394,7 +436,7 @@ func (l *Lexer) isEqual() (stopLexing bool) {
 //	return false
 //}
 
-func (l *Lexer) NextToken() {
+func (l *Lexer) nextToken() {
 	if l.isEOF {
 		l.token = TokEOF
 		return
@@ -442,7 +484,20 @@ func (l *Lexer) NextToken() {
 		return
 	}
 
-	l.isEOF = l.nextChar() != nil
+	if l.isBrace() {
+		return
+	}
 
+	if l.isTypeSpec() {
+		return
+	}
+
+	if l.isArgSep() {
+		return
+	}
+
+	tempChar := l.lastChar
+	l.isEOF = l.nextChar() != nil
 	l.token = TokUnknown
+	l.unknownVal = tempChar
 }

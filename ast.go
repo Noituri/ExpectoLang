@@ -22,15 +22,18 @@ const (
 )
 
 type AST interface {
-	Position() position
+	Position() Pos
 	Kind() kind
 	codegen() llvm.Value
 }
 
-type position int
+type Pos struct {
+	row int
+	col int
+}
 type kind int
 
-func (p position) Position() position {
+func (p Pos) Position() Pos {
 	return p
 }
 
@@ -39,39 +42,39 @@ func (k kind) Kind() kind {
 }
 
 type NumberLiteralAST struct {
-	position
+	Pos
 	kind
 	Value float64
 }
 
 type BinaryAST struct {
-	position
+	Pos
 	kind
 	Op       string
 	Lhs, Rhs AST
 }
 
 type UnaryAST struct {
-	position
+	Pos
 	kind
 	Operator int
 	Operand  AST
 }
 
 type BoolAST struct {
-	position
+	Pos
 	kind
 	Value int
 }
 
 type StringAST struct {
-	position
+	Pos
 	kind
 	Value string
 }
 
 type VariableAST struct {
-	position
+	Pos
 	kind
 	Name    string
 	VarType string
@@ -79,14 +82,14 @@ type VariableAST struct {
 }
 
 type ElifAST struct {
-	position
+	Pos
 	kind
 	Condition AST
 	Body      BlockAST
 }
 
 type IfElseAST struct {
-	position
+	Pos
 	kind
 	Condition AST
 	TrueBody  BlockAST
@@ -95,7 +98,7 @@ type IfElseAST struct {
 }
 
 type LoopAST struct {
-	position
+	Pos
 	kind
 	forIn      bool
 	Condition  AST
@@ -105,20 +108,20 @@ type LoopAST struct {
 }
 
 type CallAST struct {
-	position
+	Pos
 	kind
 	Callee string
 	args   []AST
 }
 
 type ReturnAST struct {
-	position
+	Pos
 	kind
 	Body AST
 }
 
 type BlockAST struct {
-	position
+	Pos
 	kind
 	Elements []AST
 }
@@ -129,7 +132,7 @@ type ArgsPrototype struct {
 }
 
 type PrototypeAST struct {
-	position
+	Pos
 	kind
 	Name       string
 	Args       []ArgsPrototype
@@ -140,7 +143,7 @@ type PrototypeAST struct {
 }
 
 type FunctionAST struct {
-	position
+	Pos
 	kind
 	Proto PrototypeAST
 	Body  BlockAST

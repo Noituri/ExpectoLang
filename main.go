@@ -6,11 +6,7 @@ import (
 )
 
 func handleFunction(parser *Parser, init bool) {
-	functionAST, err := parser.ParseFunction()
-	if err != nil {
-		panic("Function Parse Error: " + err.Error())
-	}
-
+	functionAST := parser.parseFunction()
 	if init {
 		protoIR := functionAST.Proto.codegen()
 		if protoIR.IsNil() {
@@ -25,35 +21,35 @@ func handleFunction(parser *Parser, init bool) {
 }
 
 func handleExtern(parser *Parser, init bool) {
-	protoAST, err := parser.ParseExtern()
-	if err != nil {
-		panic("Extern Parse Error: " + err.Error())
-	}
-
-	if init {
-		externIR := protoAST.codegen()
-		if externIR.IsNil() {
-			panic("Extern CodeGen Error: Could not create IR")
-		}
-	}
+	//protoAST, err := parser.ParseExtern()
+	//if err != nil {
+	//	panic("Extern Parse Error: " + err.Error())
+	//}
+	//
+	//if init {
+	//	externIR := protoAST.codegen()
+	//	if externIR.IsNil() {
+	//		panic("Extern CodeGen Error: Could not create IR")
+	//	}
+	//}
 }
 
 func handleTopLevelExpression(parser *Parser, init bool) {
-	topAST, err := parser.ParseTopLevelExpr()
-	if err != nil {
-		panic("Top Level Expression Parse Error: " + err.Error())
-	}
-
-	if !init {
-		topIR := topAST.codegen()
-		if topIR.IsNil() {
-			panic("Top Level Expression CodeGen Error: Could not create IR")
-		}
-	}
+	//topAST, err := parser.ParseTopLevelExpr()
+	//if err != nil {
+	//	panic("Top Level Expression Parse Error: " + err.Error())
+	//}
+	//
+	//if !init {
+	//	topIR := topAST.codegen()
+	//	if topIR.IsNil() {
+	//		panic("Top Level Expression CodeGen Error: Could not create IR")
+	//	}
+	//}
 }
 
 func handle(parser Parser, init bool) {
-	switch parser.lexer.CurrentToken.kind {
+	switch parser.lexer.token {
 	case TokEOF:
 		return
 	case TokFunction:
@@ -61,7 +57,7 @@ func handle(parser Parser, init bool) {
 	case TokExtern:
 		handleExtern(&parser, init)
 	case TokAttribute:
-		parser.parseAttribute()
+		//parser.parseAttribute()
 	default:
 		handleTopLevelExpression(&parser, init)
 	}
@@ -70,13 +66,13 @@ func handle(parser Parser, init bool) {
 }
 
 func main() {
-	data, err := ioutil.ReadFile("./example.exp")
+	data, err := ioutil.ReadFile("./example.nv")
 	if err != nil {
 		panic(err.Error())
 	}
 
 	parser := NewParser(string(data))
-	parser.lexer.NextToken()
+	parser.lexer.nextToken()
 	InitModuleAndPassManager()
 
 	handle(parser, true)
