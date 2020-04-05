@@ -358,7 +358,7 @@ func (i *IfElseAST) codegen() llvm.Value {
 	}
 
 	// build elifs body
-	for ind, el := range i.ElifBody {
+	for ind, el := range i.ElseIfBody {
 		if ind == 0 {
 			builder.SetInsertPointAtEnd(elseBlock)
 			elseBlock = llvm.AddBasicBlock(fc, "else")
@@ -372,7 +372,7 @@ func (i *IfElseAST) codegen() llvm.Value {
 			panic("No condition in elif")
 		}
 
-		if ind == len(i.ElifBody)-1 {
+		if ind == len(i.ElseIfBody)-1 {
 			builder.CreateCondBr(elifCond, elifThenBlock, elseBlock)
 		} else {
 			builder.CreateCondBr(elifCond, elifThenBlock, elifElseBlock)
@@ -386,14 +386,14 @@ func (i *IfElseAST) codegen() llvm.Value {
 		}
 
 		builder.SetInsertPointAtEnd(elifElseBlock)
-		if ind == len(i.ElifBody)-1 {
+		if ind == len(i.ElseIfBody)-1 {
 			builder.CreateBr(exitBlock)
 		}
 	}
 
 	// build else body
 	builder.SetInsertPointAtEnd(elseBlock)
-	_, isRet = i.FalseBody.codegen()
+	_, isRet = i.ElseBody.codegen()
 
 	if !isRet {
 		builder.CreateBr(exitBlock)

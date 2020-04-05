@@ -416,16 +416,16 @@ func (p *Parser) parseStmt() AST {
 	//	return p.parseStr()
 	case TokNumber:
 		return p.parseNumber()
-	//case TokLParen:
-	//	return p.parseParen()
-	//case TokIf:
-	//	return p.parseIfElse()
+	case TokLParen:
+		return p.parseParen()
+	case TokIf:
+		return p.parseIfElse()
 	case TokReturn:
 		return p.parseReturn()
 	//case TokForLoop:
 	//	return p.parseLoop()
-	//case TokTrue, TokFalse:
-	//	return p.parseBool()
+	case TokTrue, TokFalse:
+		return p.parseBool()
 	default:
 		what := tokens[p.lexer.token]
 		if p.lexer.token == TokUnknown {
@@ -436,36 +436,35 @@ func (p *Parser) parseStmt() AST {
 	}
 }
 
-//func (p *Parser) parseBool() AST {
-//	pos := p.lexer.CurrentChar
-//	val := 0
-//
-//	if p.lexer.Identifier == "true" {
-//		val = 1
-//	} else if p.lexer.Identifier != "false" {
-//		panic("Error occurred while parsing boolean")
-//	}
-//
-//	p.lexer.nextToken()
-//	return &BoolAST{Pos(pos), astBool, val}
-//}
-//
-//func (p *Parser) parseParen() AST {
-//	p.lexer.nextToken()
-//	val := p.ParseExpression()
-//	if val == nil {
-//		return nil
-//	}
-//
-//	if p.lexer.CurrentToken.kind != TokRParen {
-//		panic("Syntax Error: Parenthesis are not closed")
-//	}
-//
-//	p.lexer.nextToken()
-//
-//	return val
-//}
-//
+func (p *Parser) parseBool() AST {
+	pos := p.lexer.pos
+	val := 0
+
+	if p.lexer.identifier == "true" {
+		val = 1
+	} else if p.lexer.identifier != "false" {
+		panic("Error occurred while parsing boolean")
+	}
+
+	p.lexer.nextToken()
+	return &BoolAST{pos, astBool, val}
+}
+
+func (p *Parser) parseParen() AST {
+	p.lexer.nextToken()
+	val := p.parseExpression()
+	if val == nil {
+		return nil
+	}
+
+	if p.lexer.token != TokRParen {
+		panic("Syntax Error: Parenthesis are not closed")
+	}
+
+	p.lexer.nextToken()
+	return val
+}
+
 //func (p *Parser) parseIdentifier() AST {
 //	pos := p.lexer.CurrentChar
 //	name := p.lexer.Identifier
@@ -535,106 +534,119 @@ func (p *Parser) parseNumber() AST {
 	return &NumberLiteralAST{pos, kind, val}
 }
 
-//func (p *Parser) parseIfElse() AST {
-//	pos := p.lexer.CurrentChar
-//	p.lexer.nextToken()
-//
-//	cond := p.ParseExpression()
-//	if cond == nil {
-//		panic("Syntax Error: No condition inside if")
-//	}
-//
-//	trueBody := []AST{}
-//	for ; p.lexer.CurrentToken.kind != TokElse && p.lexer.CurrentToken.kind != TokElif && p.lexer.CurrentToken.kind != TokEnd; {
-//		if p.lexer.CurrentToken.kind == TokEOF {
-//			panic("Syntax Error: No end")
-//		}
-//
-//		body := p.ParseExpression()
-//		if body != nil {
-//			trueBody = append(trueBody, body)
-//		}
-//	}
-//
-//	elifBody := []ElifAST{}
-//	for ; ; {
-//		if p.lexer.CurrentToken.kind == TokEOF {
-//			panic("Syntax Error: No end")
-//		}
-//
-//		if p.lexer.CurrentToken.kind != TokElif {
-//			break
-//		}
-//
-//		p.lexer.nextToken()
-//
-//		elifCond := p.ParseExpression()
-//		if elifCond == nil {
-//			panic("Syntax Error: No condition inside elif")
-//		}
-//
-//		tempBody := []AST{}
-//		for ; p.lexer.CurrentToken.kind != TokEnd && p.lexer.CurrentToken.kind != TokElse && p.lexer.CurrentToken.kind != TokElif; {
-//			if p.lexer.CurrentToken.kind == TokEOF {
-//				panic("Syntax Error: No end")
-//			}
-//
-//			body := p.ParseExpression()
-//			if body != nil {
-//				tempBody = append(tempBody, body)
-//			}
-//		}
-//
-//		elifBody = append(elifBody, ElifAST{
-//			Pos(pos),
-//			astIfElse,
-//			elifCond,
-//			BlockAST{
-//				Pos(pos),
-//				astBlock,
-//				tempBody,
-//			},
-//		})
-//	}
-//
-//	falseBody := []AST{}
-//	if p.lexer.CurrentToken.kind == TokElse {
-//		p.lexer.nextToken()
-//		for ; p.lexer.CurrentToken.kind != TokEnd; {
-//			if p.lexer.CurrentToken.kind == TokEOF {
-//				panic("Syntax Error: No end")
-//			}
-//
-//			body := p.ParseExpression()
-//			if body != nil {
-//				falseBody = append(falseBody, body)
-//			}
-//		}
-//	}
-//
-//	p.lexer.nextToken()
-//
-//	return &IfElseAST{
-//		Pos(pos),
-//		astIfElse,
-//		cond,
-//		BlockAST{
-//			Pos(pos),
-//			astBlock,
-//			trueBody,
-//		},
-//		BlockAST{
-//			Pos(pos),
-//			astBlock,
-//			falseBody,
-//		},
-//		elifBody,
-//	}
-//}
+func (p *Parser) parseIfElse() AST {
+	pos := p.lexer.pos
+	p.lexer.nextToken()
+
+	cond := p.parseExpression()
+	if cond == nil {
+		panic("Syntax Error: No condition inside if")
+	}
+	scopePos := p.checkAndNext(TokLBrace)
+
+	var trueBody []AST
+	for p.lexer.token != TokRBrace {
+		if p.lexer.token == TokEOF {
+			panic("No closing brace in 'if' statement")
+		}
+
+		body := p.parseExpression()
+		if body != nil {
+			trueBody = append(trueBody, body)
+		}
+	}
+
+	p.lexer.nextToken()
+
+	var elseScope Pos
+	var elseBody []AST
+	var elseIfBody []ElseIfAST
+	for {
+		if p.lexer.token == TokEOF {
+			panic("No closing brace in 'else if' statement")
+		}
+
+		if p.lexer.token != TokElse {
+			break
+		}
+
+		p.lexer.nextToken()
+
+		if p.lexer.token != TokIf {
+			elseScope = p.checkAndNext(TokLBrace)
+			for p.lexer.token != TokRBrace {
+				if p.lexer.token == TokEOF {
+					panic("No closing brace in 'else' statement")
+				}
+
+				body := p.parseExpression()
+				if body != nil {
+					elseBody = append(elseBody, body)
+				}
+			}
+
+			p.lexer.nextToken()
+			break
+		}
+
+		p.lexer.nextToken()
+
+		elseIfCond := p.parseExpression()
+		if elseIfCond == nil {
+			panic("No condition inside 'else if'")
+		}
+
+		elseIfScope := p.checkAndNext(TokLBrace)
+
+		var tempBody []AST
+		for p.lexer.token != TokRBrace {
+			if p.lexer.token == TokEOF {
+				panic("No closing brace in 'else if' statement")
+			}
+
+			body := p.parseExpression()
+			if body != nil {
+				tempBody = append(tempBody, body)
+			}
+		}
+
+		p.lexer.nextToken()
+		elseIfBody = append(elseIfBody, ElseIfAST{
+			elseIfScope,
+			astIfElse,
+			elseIfCond,
+			BlockAST{
+				elseIfScope,
+				astBlock,
+				tempBody,
+			},
+		})
+	}
+
+	return &IfElseAST{
+		pos,
+		astIfElse,
+		cond,
+		BlockAST{
+			scopePos,
+			astBlock,
+			trueBody,
+		},
+		BlockAST{
+			elseScope,
+			astBlock,
+			elseBody,
+		},
+		elseIfBody,
+	}
+}
 
 func (p *Parser) parseReturn() AST {
 	pos := p.lexer.pos
-	if p.lexer.lastChar == 10 || p.lexer.lastChar == 13 || p.lexer.lastChar == '\t' || p.lexer.lastChar == 32 {
+	p.lexer.ignoreNewLine = false
+	p.lexer.nextToken()
+	p.lexer.ignoreNewLine = true
+	if p.lexer.unknownVal == 10 || p.lexer.unknownVal == 13 {
 		p.lexer.nextToken()
 		return &ReturnAST{
 			pos,
@@ -643,7 +655,6 @@ func (p *Parser) parseReturn() AST {
 		}
 	}
 
-	p.lexer.nextToken()
 	value := p.parseExpression()
 	return &ReturnAST{
 		pos,

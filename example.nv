@@ -1,3 +1,16 @@
+fun and(valA: bool, valB: bool): bool {
+    if 0 == 0 {
+        return false
+    } else if 1 == 0 {
+        return false
+    } else if 0 == 3 {
+        return true
+    } else {
+        return false
+    }
+    return true
+}
+
 fun main(a: int, b: int) {
 
 }

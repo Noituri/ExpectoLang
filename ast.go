@@ -81,7 +81,7 @@ type VariableAST struct {
 	Mutable bool
 }
 
-type ElifAST struct {
+type ElseIfAST struct {
 	Pos
 	kind
 	Condition AST
@@ -91,10 +91,10 @@ type ElifAST struct {
 type IfElseAST struct {
 	Pos
 	kind
-	Condition AST
-	TrueBody  BlockAST
-	FalseBody BlockAST
-	ElifBody  []ElifAST
+	Condition  AST
+	TrueBody   BlockAST
+	ElseBody   BlockAST
+	ElseIfBody []ElseIfAST
 }
 
 type LoopAST struct {
