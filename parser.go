@@ -219,7 +219,6 @@ func (p *Parser) parsePrototype() PrototypeAST {
 	}
 
 	p.lexer.ignoreAtoms = false
-
 	return PrototypeAST{
 		pos,
 		astPrototype,
@@ -421,8 +420,8 @@ func (p *Parser) parseStmt() AST {
 	//	return p.parseParen()
 	//case TokIf:
 	//	return p.parseIfElse()
-	//case TokReturn:
-	//	return p.parseReturn()
+	case TokReturn:
+		return p.parseReturn()
 	//case TokForLoop:
 	//	return p.parseLoop()
 	//case TokTrue, TokFalse:
@@ -632,29 +631,27 @@ func (p *Parser) parseNumber() AST {
 //		elifBody,
 //	}
 //}
-//
-//func (p *Parser) parseReturn() AST {
-//	pos := p.lexer.CurrentChar
-//	p.lexer.ignoreNewLine = false
-//	p.lexer.nextToken()
-//	p.lexer.ignoreNewLine = true
-//
-//	if p.lexer.CurrentToken.val == 10 || p.lexer.CurrentToken.val == 13 {
-//		return &ReturnAST{
-//			Pos(pos),
-//			astReturn,
-//			nil,
-//		}
-//	}
-//
-//	value := p.ParseExpression()
-//	return &ReturnAST{
-//		Pos(pos),
-//		astReturn,
-//		value,
-//	}
-//}
-//
+
+func (p *Parser) parseReturn() AST {
+	pos := p.lexer.pos
+	if p.lexer.lastChar == 10 || p.lexer.lastChar == 13 || p.lexer.lastChar == '\t' || p.lexer.lastChar == 32 {
+		p.lexer.nextToken()
+		return &ReturnAST{
+			pos,
+			astReturn,
+			nil,
+		}
+	}
+
+	p.lexer.nextToken()
+	value := p.parseExpression()
+	return &ReturnAST{
+		pos,
+		astReturn,
+		value,
+	}
+}
+
 //func (p *Parser) parseLoopBody() []AST {
 //	body := []AST{}
 //	for ; p.lexer.CurrentToken.kind != TokEnd; {
