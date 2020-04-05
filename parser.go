@@ -410,8 +410,8 @@ func (p *Parser) parseBinOpRHS(expressionPrec int, lhs AST) AST {
 
 func (p *Parser) parseStmt() AST {
 	switch p.lexer.token {
-	//case TokIdentifier:
-	//	return p.parseIdentifier()
+	case TokIdentifier:
+		return p.parseIdentifier()
 	//case TokStr:
 	//	return p.parseStr()
 	case TokNumber:
@@ -465,55 +465,55 @@ func (p *Parser) parseParen() AST {
 	return val
 }
 
-//func (p *Parser) parseIdentifier() AST {
-//	pos := p.lexer.CurrentChar
-//	name := p.lexer.Identifier
-//
-//	p.lexer.nextToken()
-//
-//	if p.lexer.CurrentToken.kind != TokLParen {
-//		varType, ok := p.knownVars[name]
-//		if !ok {
-//			panic(fmt.Sprintf(`Error: Variable "%s" does not exist!`, name))
-//		}
-//
-//		return &VariableAST{
-//			Pos: Pos(pos),
-//			kind:     astVariable,
-//			Name:     name,
-//			VarType:  varType,
-//		}
-//	}
-//
-//	p.lexer.nextToken()
-//
-//	args := []AST{}
-//
-//	for ; p.lexer.CurrentToken.kind != TokRParen; {
-//		if p.lexer.CurrentToken.kind == TokEOF {
-//			panic("Syntax Error: Function call is not closed")
-//		}
-//
-//		arg := p.ParseExpression()
-//		if arg != nil {
-//			args = append(args, arg)
-//		}
-//
-//		if p.lexer.CurrentToken.kind == TokRParen {
-//			break
-//		}
-//
-//		if p.lexer.CurrentToken.val != ',' {
-//			panic("Syntax Error: Invalid character")
-//		}
-//
-//		p.lexer.nextToken()
-//	}
-//
-//	p.lexer.nextToken()
-//	return &CallAST{Pos(pos), astCall, name, args}
-//}
-//
+func (p *Parser) parseIdentifier() AST {
+	pos := p.lexer.pos
+	name := p.lexer.identifier
+
+	p.lexer.nextToken()
+
+	if p.lexer.token != TokLParen {
+		varType, ok := p.knownVars[name]
+		if !ok {
+			panic(fmt.Sprintf(`Variable "%s" does not exist!`, name))
+		}
+
+		return &VariableAST{
+			Pos: 	  pos,
+			kind:     astVariable,
+			Name:     name,
+			VarType:  varType,
+		}
+	}
+
+	p.lexer.nextToken()
+
+	var args []AST
+
+	for p.lexer.token != TokRParen {
+		if p.lexer.token == TokEOF {
+			panic("Function call is not closed")
+		}
+
+		arg := p.parseExpression()
+		if arg != nil {
+			args = append(args, arg)
+		}
+
+		if p.lexer.token == TokRParen {
+			break
+		}
+
+		if p.lexer.token != TokArgSep {
+			panic("Expected ',' in '"+name+"' function call.")
+		}
+
+		p.lexer.nextToken()
+	}
+
+	p.lexer.nextToken()
+	return &CallAST{pos, astCall, name, args}
+}
+
 //func (p *Parser) parseStr() AST {
 //	pos := p.lexer.CurrentChar
 //	val := p.lexer.strVal

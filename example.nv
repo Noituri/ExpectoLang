@@ -1,11 +1,5 @@
-fun and(valA: bool, valB: bool): bool {
-    if 0 == 0 {
-        return false
-    } else if 1 == 0 {
-        return false
-    } else if 0 == 3 {
-        return true
-    } else {
+fun and(val_a: bool, val_b: bool): bool {
+    if val_a == val_b {
         return false
     }
     return true
