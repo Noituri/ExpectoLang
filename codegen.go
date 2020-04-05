@@ -15,7 +15,7 @@ var (
 )
 
 func InitModuleAndPassManager() {
-	module = llvm.NewModule("expectoroot")
+	module = llvm.NewModule("novumroot")
 	fcPassManager = llvm.NewFunctionPassManagerForModule(module)
 	fcPassManager.AddInstructionCombiningPass()
 	fcPassManager.AddGVNPass()
@@ -46,23 +46,34 @@ func (v *VariableAST) codegen() llvm.Value {
 	return val
 }
 
-func (b *BinaryAST) binOpNumberCodegen(l, r llvm.Value) llvm.Value {
+func (b *BinaryAST) binOpNumberCodegen(l, r llvm.Value, kind string) llvm.Value {
 	if l.IsNil() || r.IsNil() {
 		panic("null operands")
 	}
 
 	switch b.Op {
 	case "+":
+		if kind == LitInt {
+			return builder.CreateAdd(l, r, "addtmp")
+		}
 		return builder.CreateFAdd(l, r, "addtmp")
 	case "-":
+		if kind == LitInt {
+			return builder.CreateSub(l, r, "addtmp")
+		}
 		return builder.CreateFSub(l, r, "subtmp")
 	case "*":
+		if kind == LitInt {
+			return builder.CreateMul(l, r, "addtmp")
+		}
 		return builder.CreateFMul(l, r, "multmo")
 	case "/":
+		if kind == LitInt {
+			return builder.CreateSDiv(l, r, "divtmp")
+		}
 		if os.Getenv("PRELUDE") == "empty" {
 			return builder.CreateFDiv(l, r, "divtmp")
 		}
-
 		cond := builder.CreateFCmp(llvm.FloatOEQ, llvm.ConstFloat(llvm.DoubleType(), 0), r, "cmptmp")
 		fc := builder.GetInsertBlock().Parent()
 		thenBlock := llvm.AddBasicBlock(fc, "thendivchecker")
@@ -95,10 +106,24 @@ func (b *BinaryAST) binOpNumberCodegen(l, r llvm.Value) llvm.Value {
 		builder.SetInsertPointAtEnd(exitBlock)
 		return result
 	case "<":
+		if kind == LitInt {
+			return builder.CreateICmp(llvm.IntSLT, l, r, "addtmp")
+		}
+		return builder.CreateFCmp(llvm.FloatOLT, l, r, "cmptmp")
+	case ">":
+		if kind == LitInt {
+			return builder.CreateICmp(llvm.IntSLT, r, l, "addtmp")
+		}
 		return builder.CreateFCmp(llvm.FloatOLT, l, r, "cmptmp")
 	case "==":
+		if kind == LitInt {
+			return builder.CreateICmp(llvm.IntEQ, l, r, "addtmp")
+		}
 		return builder.CreateFCmp(llvm.FloatOEQ, l, r, "cmptmp")
 	case "!=":
+		if kind == LitInt {
+			return builder.CreateICmp(llvm.IntNE, l, r, "addtmp")
+		}
 		return builder.CreateFCmp(llvm.FloatONE, l, r, "cmptmp")
 	default:
 		panic(fmt.Sprintf(`Operator "%c" is invalid`, b.Op))
@@ -171,8 +196,8 @@ func (b *BinaryAST) codegen() llvm.Value {
 	}
 
 	switch lKind {
-	case LitFloat:
-		return b.binOpNumberCodegen(l, r)
+	case LitFloat, LitInt:
+		return b.binOpNumberCodegen(l, r, lKind)
 	case LitString:
 		return b.binOpStrCodegen(l, r)
 	case LitBool:
@@ -207,7 +232,7 @@ func (c *CallAST) codegen() llvm.Value {
 		panic(fmt.Sprintf(`Incorrect arguments passed in the function "%s"`, c.Callee))
 	}
 
-	argsValues := []llvm.Value{}
+	var argsValues []llvm.Value
 
 	for _, arg := range c.args {
 		argVal := arg.codegen()

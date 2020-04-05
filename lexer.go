@@ -105,7 +105,7 @@ func NewLexer(source string) Lexer {
 		source:        source,
 		offsetChar:    0,
 		forwardOffset: 0,
-		pos:           Pos{col: 1, row: 1},
+		pos:           Pos{col: 1, row: 0},
 		ignoreNewLine: true,
 		ignoreSpace:   true,
 	}
@@ -219,7 +219,6 @@ func (l *Lexer) isDigit() (stopLexing bool) {
 
 func (l *Lexer) isComment() (stopLexing bool) {
 	if l.lastChar == '/' {
-		l.isEOF = l.nextChar() != nil
 		ch := l.peek()
 		if ch == '/' {
 			for {
@@ -496,8 +495,7 @@ func (l *Lexer) nextToken() {
 		return
 	}
 
-	tempChar := l.lastChar
-	l.isEOF = l.nextChar() != nil
+	l.unknownVal = l.lastChar
 	l.token = TokUnknown
-	l.unknownVal = tempChar
+	l.isEOF = l.nextChar() != nil
 }

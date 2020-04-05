@@ -243,11 +243,10 @@ func (p *Parser) parseFunction() FunctionAST {
 		if p.lexer.token == TokEOF {
 			panic("Function is not closed.")
 		}
-		// TODO: expression
-		//expr := p.parseExpression()
-		//if expr != nil {
-		//	body = append(body, expr)
-		//}
+		expr := p.parseExpression()
+		if expr != nil {
+			body = append(body, expr)
+		}
 	}
 
 	if proto.ReturnType == LitVoid {
@@ -310,132 +309,134 @@ func (p *Parser) parseFunction() FunctionAST {
 //		block,
 //	}, nil
 //}
-//
-//func (p *Parser) parseExpression() AST {
-//	lhs := p.parseUnary()
-//
-//	if lhs == nil {
-//		return nil
-//	}
-//
-//	return p.ParseBinOpRHS(0, lhs)
-//}
-//
-//func (p *Parser) checkBinOpPrec() (int, bool, string) {
-//	operator := ""
-//	charCount := p.lexer.CurrentChar
-//	token := p.lexer.CurrentToken
-//	lastChar := p.lexer.LastChar
-//
-//	for ;; {
-//		isMatch := false
-//		tempOp := ""
-//
-//		switch p.lexer.CurrentToken.kind {
-//		case TokAssign:
-//			tempOp += "="
-//		case TokEqual:
-//			tempOp += "=="
-//		default:
-//			tempOp += string(rune(p.lexer.CurrentToken.val))
-//		}
-//
-//		for k, _ := range p.binOpPrecedence {
-//			if strings.HasPrefix(k, tempOp) {
-//				isMatch = true
-//				charCount = p.lexer.CurrentChar
-//				token = p.lexer.CurrentToken
-//				lastChar = p.lexer.LastChar
-//				break
-//			}
-//		}
-//
-//		if !isMatch {
-//			p.lexer.CurrentChar = charCount
-//			p.lexer.CurrentToken = token
-//			p.lexer.LastChar = lastChar
-//			break
-//		}
-//
-//		operator += tempOp
-//		p.lexer.nextToken()
-//	}
-//
-//	prec, ok := p.binOpPrecedence[operator]
-//	return prec, ok, operator
-//}
-//
-//func (p *Parser) parseBinOpRHS(expressionPrec int, lhs AST) AST {
-//	pos := p.lexer.CurrentChar
-//	for ; ; {
-//		tokenPrec, ok, binop := p.checkBinOpPrec()
-//
-//		if !ok {
-//			tokenPrec = -1
-//		}
-//
-//		if tokenPrec < expressionPrec {
-//			return lhs
-//		}
-//
-//		p.lexer.nextToken()
-//		rhs := p.parseUnary()
-//
-//		if rhs == nil {
-//			return nil
-//		}
-//
-//		nextPrec, ok, _ := p.checkBinOpPrec()
-//
-//		if !ok {
-//			tokenPrec = -1
-//		}
-//
-//		if tokenPrec < nextPrec {
-//			rhs = p.ParseBinOpRHS(tokenPrec+1, rhs)
-//			if rhs == nil {
-//				return nil
-//			}
-//		}
-//
-//		lhs = &BinaryAST{
-//			Pos(pos),
-//			astBinary,
-//			binop,
-//			lhs,
-//			rhs,
-//		}
-//	}
-//}
-//
-//func (p *Parser) parseStmt() AST {
-//	switch p.lexer.token {
-//	case TokIdentifier:
-//		return p.parseIdentifier()
-//	case TokStr:
-//		return p.parseStr()
-//	case TokNumber:
-//		return p.parseNumber()
-//	case TokLParen:
-//		return p.parseParen()
-//	case TokIf:
-//		return p.parseIfElse()
-//	case TokReturn:
-//		return p.parseReturn()
-//	case TokForLoop:
-//		return p.parseLoop()
-//	case TokTrue, TokFalse:
-//		return p.parseBool()
-//	default:
-//		what := tokens[p.lexer.token]
-//		if p.lexer.token == TokUnknown {
-//			what = string(p.lexer.unknownVal)
-//		}
-//		panic("'"+what+"' has been used incorrectly.")
-//		return nil
-//	}
-//}
-//
+
+func (p *Parser) parseExpression() AST {
+	lhs := p.parseUnary()
+	if lhs == nil {
+		return nil
+	}
+
+	return p.parseBinOpRHS(0, lhs)
+}
+
+func (p *Parser) checkBinOpPrec() (prec int, ok bool, operator string) {
+	offset := p.lexer.offsetChar
+	fwOffset := p.lexer.forwardOffset
+	token := p.lexer.token
+	lastChar := p.lexer.lastChar
+
+	for {
+		if p.lexer.token != TokAssign && p.lexer.token != TokEqual && p.lexer.token != TokUnknown {
+			break
+		}
+
+		switch p.lexer.token {
+		case TokAssign:
+			operator += "="
+		case TokEqual:
+			operator += "=="
+		default:
+			operator += string(p.lexer.unknownVal)
+		}
+
+		//for k := range p.binOpPrecedence {
+		//	if strings.HasPrefix(k, tempOp) {
+		//		isMatch = true
+		//		charCount = p.lexer.CurrentChar
+		//		token = p.lexer.CurrentToken
+		//		lastChar = p.lexer.LastChar
+		//		break
+		//	}
+		//}
+		//
+		//if !isMatch {
+		//	p.lexer.CurrentChar = charCount
+		//	p.lexer.CurrentToken = token
+		//	p.lexer.LastChar = lastChar
+		//	break
+		//}
+
+		p.lexer.nextToken()
+	}
+
+	prec, ok = p.binOpPrecedence[operator]
+	if !ok {
+		p.lexer.offsetChar = offset
+		p.lexer.forwardOffset = fwOffset
+		p.lexer.token = token
+		p.lexer.lastChar = lastChar
+	}
+	return prec, ok, operator
+}
+
+func (p *Parser) parseBinOpRHS(expressionPrec int, lhs AST) AST {
+	pos := p.lexer.pos
+	for {
+		tokenPrec, ok, binop := p.checkBinOpPrec()
+		if !ok {
+			tokenPrec = -1
+		}
+
+		if tokenPrec < expressionPrec {
+			return lhs
+		}
+
+		//p.lexer.nextToken()
+		rhs := p.parseUnary()
+		if rhs == nil {
+			return nil
+		}
+
+		nextPrec, ok, _ := p.checkBinOpPrec()
+		if !ok {
+			tokenPrec = -1
+		}
+
+		if tokenPrec < nextPrec {
+			rhs = p.parseBinOpRHS(tokenPrec+1, rhs)
+			if rhs == nil {
+				return nil
+			}
+		}
+
+		lhs = &BinaryAST{
+			Pos(pos),
+			astBinary,
+			binop,
+			lhs,
+			rhs,
+		}
+	}
+}
+
+func (p *Parser) parseStmt() AST {
+	switch p.lexer.token {
+	//case TokIdentifier:
+	//	return p.parseIdentifier()
+	//case TokStr:
+	//	return p.parseStr()
+	case TokNumber:
+		return p.parseNumber()
+	//case TokLParen:
+	//	return p.parseParen()
+	//case TokIf:
+	//	return p.parseIfElse()
+	//case TokReturn:
+	//	return p.parseReturn()
+	//case TokForLoop:
+	//	return p.parseLoop()
+	//case TokTrue, TokFalse:
+	//	return p.parseBool()
+	default:
+		what := tokens[p.lexer.token]
+		if p.lexer.token == TokUnknown {
+			what = string(p.lexer.unknownVal)
+		}
+		panic("'"+what+"' has been used incorrectly.")
+		return nil
+	}
+}
+
 //func (p *Parser) parseBool() AST {
 //	pos := p.lexer.CurrentChar
 //	val := 0
@@ -522,21 +523,19 @@ func (p *Parser) parseFunction() FunctionAST {
 //	p.lexer.nextToken()
 //	return &StringAST{Pos(pos), astString, val}
 //}
-//
-//func (p *Parser) parseNumber() AST {
-//	pos := p.lexer.CurrentChar
-//	val := p.lexer.numVal
-//	kind := astNumberInt
-//
-//	if p.lexer.IsFloat {
-//		kind = astNumberFloat
-//	}
-//
-//	p.lexer.nextToken()
-//
-//	return &NumberLiteralAST{Pos(pos), kind, val}
-//}
-//
+
+func (p *Parser) parseNumber() AST {
+	pos := p.lexer.pos
+	val := p.lexer.numVal
+	kind := astNumberInt
+	if p.lexer.isFloat {
+		kind = astNumberFloat
+	}
+
+	p.lexer.nextToken()
+	return &NumberLiteralAST{pos, kind, val}
+}
+
 //func (p *Parser) parseIfElse() AST {
 //	pos := p.lexer.CurrentChar
 //	p.lexer.nextToken()
@@ -900,25 +899,23 @@ func (p *Parser) parseFunction() FunctionAST {
 //
 //	p.lexer.nextToken()
 //}
-//
-//func (p *Parser) parseUnary() AST {
-//	pos := p.lexer.CurrentChar
-//	if unicode.IsLetter(rune(p.lexer.CurrentToken.val)) || p.lexer.CurrentToken.val == -1 || p.lexer.CurrentToken.kind == TokLParen || p.lexer.CurrentToken.val == ',' {
-//		return p.ParsePrimary()
-//	}
-//
-//	unaryOp := p.lexer.CurrentToken.val
-//
-//	p.lexer.nextToken()
-//	if op := p.parseUnary(); op != nil {
-//		time.Sleep(5 * time.Second)
-//		return &UnaryAST{
-//			Pos: Pos(pos),
-//			kind:     astUnary,
-//			Operator: unaryOp,
-//			Operand:  op,
-//		}
-//	}
-//
-//	return nil
-//}
+
+func (p *Parser) parseUnary() AST {
+	pos := p.lexer.pos
+	if p.lexer.token != TokUnknown || p.lexer.unknownVal == ' ' {
+		return p.parseStmt()
+	}
+
+	unaryOp := p.lexer.unknownVal
+	p.lexer.nextToken()
+	if op := p.parseUnary(); op != nil {
+		return &UnaryAST{
+			Pos: pos,
+			kind:     astUnary,
+			Operator: int(unaryOp),
+			Operand:  op,
+		}
+	}
+
+	return nil
+}
