@@ -55,7 +55,11 @@ func (p *Parser) checkType(t string) string {
 func (p *Parser) checkAndNext(tok Token) Pos {
 	pos := p.lexer.pos
 	if p.lexer.token != tok {
-		log.Panicf("Invalid token. Expected: %s, got: %s", tokens[tok], tokens[p.lexer.token])
+		got := tokens[p.lexer.token]
+		if p.lexer.token == TokUnknown {
+			got = string(p.lexer.unknownVal)
+		}
+		log.Panicf("Invalid token. Expected: %s, got: %s", tokens[tok], got)
 	}
 	p.lexer.nextToken()
 	return pos
@@ -63,7 +67,6 @@ func (p *Parser) checkAndNext(tok Token) Pos {
 
 func (p *Parser) parseArgs() []ArgsPrototype {
 	var argsNames []ArgsPrototype
-
 	for {
 		if p.lexer.token == TokIdentifier {
 			name := p.lexer.identifier
@@ -133,7 +136,7 @@ func (p *Parser) parsePrototype() PrototypeAST {
 		p.lexer.nextToken()
 	default:
 		if !isOperator {
-			panic("Error: Only operators can use special character")
+			panic("Only operators can use special character")
 		}
 
 		p.lexer.ignoreNewLine = false
@@ -318,15 +321,22 @@ func (p *Parser) parseExpression() AST {
 	return p.parseBinOpRHS(0, lhs)
 }
 
-func (p *Parser) checkBinOpPrec() (prec int, ok bool, operator string) {
-	offset := p.lexer.offsetChar
-	fwOffset := p.lexer.forwardOffset
-	token := p.lexer.token
-	lastChar := p.lexer.lastChar
+// This solution is super not clean IMHO. I could not think of a better one tho
+func (p *Parser) checkBinOpPrec() (prec, tokenOffset int, ok bool, operator string) {
+	oldLexer := p.lexer.clone()
+	var prevLexers []Lexer
+	goBack := 0
 
 	for {
 		if p.lexer.token != TokAssign && p.lexer.token != TokEqual && p.lexer.token != TokUnknown {
-			break
+			prec, ok = p.binOpPrecedence[operator]
+			if !ok {
+				p.lexer = oldLexer
+			} else {
+				p.lexer = prevLexers[len(prevLexers) - goBack]
+			}
+
+			return prec, goBack, ok, operator
 		}
 
 		switch p.lexer.token {
@@ -338,59 +348,35 @@ func (p *Parser) checkBinOpPrec() (prec int, ok bool, operator string) {
 			operator += string(p.lexer.unknownVal)
 		}
 
-		//for k := range p.binOpPrecedence {
-		//	if strings.HasPrefix(k, tempOp) {
-		//		isMatch = true
-		//		charCount = p.lexer.CurrentChar
-		//		token = p.lexer.CurrentToken
-		//		lastChar = p.lexer.LastChar
-		//		break
-		//	}
-		//}
-		//
-		//if !isMatch {
-		//	p.lexer.CurrentChar = charCount
-		//	p.lexer.CurrentToken = token
-		//	p.lexer.LastChar = lastChar
-		//	break
-		//}
-
+		prevLexers = append(prevLexers, p.lexer.clone())
 		p.lexer.nextToken()
+		goBack++
 	}
-
-	prec, ok = p.binOpPrecedence[operator]
-	if !ok {
-		p.lexer.offsetChar = offset
-		p.lexer.forwardOffset = fwOffset
-		p.lexer.token = token
-		p.lexer.lastChar = lastChar
-	}
-	return prec, ok, operator
 }
 
 func (p *Parser) parseBinOpRHS(expressionPrec int, lhs AST) AST {
 	pos := p.lexer.pos
 	for {
-		tokenPrec, ok, binop := p.checkBinOpPrec()
+		tokenPrec, offset, ok, binop := p.checkBinOpPrec()
 		if !ok {
 			tokenPrec = -1
 		}
-
 		if tokenPrec < expressionPrec {
 			return lhs
 		}
 
-		//p.lexer.nextToken()
+		for i := 0; i < offset; i++ {
+			p.lexer.nextToken()
+		}
 		rhs := p.parseUnary()
 		if rhs == nil {
 			return nil
 		}
 
-		nextPrec, ok, _ := p.checkBinOpPrec()
+		nextPrec, _, ok, _ := p.checkBinOpPrec()
 		if !ok {
-			tokenPrec = -1
+			nextPrec = -1
 		}
-
 		if tokenPrec < nextPrec {
 			rhs = p.parseBinOpRHS(tokenPrec+1, rhs)
 			if rhs == nil {
@@ -399,7 +385,7 @@ func (p *Parser) parseBinOpRHS(expressionPrec int, lhs AST) AST {
 		}
 
 		lhs = &BinaryAST{
-			Pos(pos),
+			pos,
 			astBinary,
 			binop,
 			lhs,
@@ -407,7 +393,6 @@ func (p *Parser) parseBinOpRHS(expressionPrec int, lhs AST) AST {
 		}
 	}
 }
-
 func (p *Parser) parseStmt() AST {
 	switch p.lexer.token {
 	case TokIdentifier:
@@ -458,7 +443,7 @@ func (p *Parser) parseParen() AST {
 	}
 
 	if p.lexer.token != TokRParen {
-		panic("Syntax Error: Parenthesis are not closed")
+		panic("Parenthesis are not closed.")
 	}
 
 	p.lexer.nextToken()
@@ -646,8 +631,8 @@ func (p *Parser) parseReturn() AST {
 	p.lexer.ignoreNewLine = false
 	p.lexer.nextToken()
 	p.lexer.ignoreNewLine = true
-	if p.lexer.unknownVal == 10 || p.lexer.unknownVal == 13 {
-		p.lexer.nextToken()
+
+	if p.lexer.token == TokUnknown && (p.lexer.unknownVal == 10 || p.lexer.unknownVal == 13) {
 		return &ReturnAST{
 			pos,
 			astReturn,
@@ -792,121 +777,107 @@ func (p *Parser) parseReturn() AST {
 //		},
 //	}
 //}
-//
-//func (p *Parser) parseAssign(panicMessage string) interface{} {
-//	p.lexer.nextToken()
-//	if p.lexer.CurrentToken.kind != TokAssign {
-//		panic(panicMessage)
-//	}
-//
-//	p.lexer.nextToken()
-//	if p.lexer.CurrentToken.kind == TokIdentifier || p.lexer.CurrentToken.kind == TokAtom {
-//		return p.lexer.Identifier
-//	}
-//
-//	if p.lexer.CurrentToken.kind == TokNumber {
-//		return p.lexer.numVal
-//	}
-//
-//	panic(panicMessage)
-//}
-//
-//func (p *Parser) parsePrimitiveAttr() {
-//	_ = p.lexer.CurrentChar
-//	p.lexer.nextToken()
-//
-//	if p.lexer.CurrentToken.kind != TokLParen {
-//		panic("Syntax Error: No ( in the primitive attribute")
-//	}
-//
-//	prevToken := 0
-//	for ; ; {
-//		if p.lexer.CurrentToken.kind == TokRParen {
-//			break
-//		}
-//		p.lexer.nextToken()
-//		if p.lexer.CurrentToken.kind == TokRParen {
-//			if prevToken == ',' {
-//				panic("Syntax Error: Wrong attribute definition")
-//			}
-//
-//			break
-//		}
-//
-//		if p.lexer.CurrentToken.kind == TokEOF {
-//			panic("Syntax Error: Primitive attribute is not closed")
-//		}
-//
-//		if p.lexer.CurrentToken.kind != TokIdentifier {
-//			panic("Syntax Error: No identifier in the primitive attribute")
-//		}
-//
-//		switch p.lexer.Identifier {
-//		case "type":
-//			typ := p.parseAssign("Syntax Error: Invalid value assigning in the 'type' option of the primitive attribute")
-//			switch typ {
-//			case ":unary":
-//				p.isBinaryOp = false
-//			case ":binary":
-//				p.isBinaryOp = true
-//			default:
-//				panic("Syntax Error: Type '" + typ.(string) + "' in the primitive attribute does not exist")
-//			}
-//		case "precedence":
-//			precedence, ok := p.parseAssign("Syntax Error: Invalid value assigning in the 'precedence' option of the primitive attribute").(float64)
-//			if !ok {
-//				panic("Syntax Error: Could not assign value to precedence because value is not a number")
-//			}
-//
-//			p.defaultPrecedence = int(precedence)
-//		default:
-//			panic("Syntax Error: There is no \"" + p.lexer.Identifier + "\" option in the primitive attribute")
-//		}
-//
-//		p.lexer.nextToken()
-//		if p.lexer.CurrentToken.val != ',' && p.lexer.CurrentToken.kind != TokRParen {
-//			panic("Syntax Error: Wrong attribute definition")
-//		}
-//
-//		prevToken = p.lexer.CurrentToken.val
-//	}
-//
-//	p.isOperator = true
-//}
-//
-//func (p *Parser) parseAttribute() {
-//	_ = p.lexer.CurrentChar
-//
-//	p.lexer.nextToken()
-//
-//	for ; ; {
-//		if p.lexer.CurrentToken.val == ']' {
-//			break
-//		}
-//
-//		if p.lexer.CurrentToken.kind == TokEOF {
-//			panic("Syntax Error: Attribute is not closed")
-//		}
-//
-//		if p.lexer.CurrentToken.kind != TokIdentifier {
-//			panic("Syntax Error: No identifier in the attribute")
-//		}
-//
-//		switch p.lexer.Identifier {
-//		case "primitive":
-//			p.parsePrimitiveAttr()
-//		default:
-//			panic("Attribute Error: '" + p.lexer.Identifier + "' does not exist")
-//		}
-//
-//		p.lexer.nextToken()
-//		if p.lexer.CurrentToken.val != ',' && p.lexer.CurrentToken.val != ']' {
-//			panic("Syntax Error: Wrong attribute definition")
-//		}
-//	}
-//
-//	p.lexer.nextToken()
-//}
+
+func (p *Parser) parseAssign(panicMessage string) interface{} {
+	if p.lexer.token != TokAssign {
+		panic(panicMessage)
+	}
+
+	p.lexer.nextToken()
+	if p.lexer.token == TokIdentifier || p.lexer.token == TokAtom {
+		return p.lexer.identifier
+	}
+
+	if p.lexer.token == TokNumber {
+		return p.lexer.numVal
+	}
+
+	panic(panicMessage)
+}
+
+func (p *Parser) parsePrimitiveAttr() {
+	p.lexer.nextToken()
+	_ = p.checkAndNext(TokLParen)
+
+	var prevToken Token
+	for prevToken != TokRParen {
+		if p.lexer.token == TokRParen {
+			if prevToken == TokArgSep {
+				panic("Wrong attribute definition. Excepted: ','")
+			}
+
+			break
+		}
+
+		if p.lexer.token == TokEOF {
+			panic("Primitive attribute is not closed")
+		}
+
+		if p.lexer.token != TokIdentifier {
+			panic("No identifier in the primitive attribute")
+		}
+
+		switch p.lexer.identifier {
+		case "type":
+			p.lexer.nextToken()
+			typ := p.parseAssign("Invalid value assigning in the 'type' option of the primitive attribute")
+			switch typ {
+			case ":unary":
+				p.isBinaryOp = false
+			case ":binary":
+				p.isBinaryOp = true
+			default:
+				panic("Type '" + typ.(string) + "' in the primitive attribute does not exist")
+			}
+		case "precedence":
+			p.lexer.nextToken()
+			precedence, ok := p.parseAssign("Invalid value assigning in the 'precedence' option of the primitive attribute").(float64)
+			if !ok {
+				panic("Could not assign value to precedence because value is not a number")
+			}
+
+			p.defaultPrecedence = int(precedence)
+		default:
+			panic("There is no '" + p.lexer.identifier + "' option in the primitive attribute")
+		}
+
+		p.lexer.nextToken()
+		if p.lexer.token != TokArgSep && p.lexer.token != TokRParen {
+			panic("Wrong attribute definition. Expected ',' or ')'.")
+		}
+
+		prevToken = p.lexer.token
+		p.lexer.nextToken()
+	}
+
+	p.isOperator = true
+}
+
+func (p *Parser) parseAttribute() {
+	p.lexer.nextToken()
+	for p.lexer.unknownVal != ']' {
+		if p.lexer.token == TokEOF {
+			panic("Attribute is not closed")
+		}
+
+		if p.lexer.token != TokIdentifier {
+			panic("Syntax Error: No identifier in the attribute")
+		}
+
+		switch p.lexer.identifier {
+		case "primitive":
+			p.parsePrimitiveAttr()
+		default:
+			panic("Attribute Error: '" + p.lexer.identifier + "' does not exist")
+		}
+
+		if p.lexer.token != TokArgSep && p.lexer.unknownVal != ']' {
+			panic("Wrong attribute definition. Expected: ',' or ']'")
+		}
+	}
+
+	p.lexer.nextToken()
+}
 
 func (p *Parser) parseUnary() AST {
 	pos := p.lexer.pos
@@ -918,7 +889,7 @@ func (p *Parser) parseUnary() AST {
 	p.lexer.nextToken()
 	if op := p.parseUnary(); op != nil {
 		return &UnaryAST{
-			Pos: pos,
+			Pos: 	  pos,
 			kind:     astUnary,
 			Operator: int(unaryOp),
 			Operand:  op,

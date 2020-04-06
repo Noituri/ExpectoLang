@@ -117,6 +117,10 @@ func NewLexer(source string) Lexer {
 	return lexer
 }
 
+func (l *Lexer) clone() Lexer {
+	return *l
+}
+
 func (l *Lexer) nextChar() error {
 	if l.forwardOffset < len(l.source) {
 		l.offsetChar = l.forwardOffset
@@ -154,7 +158,7 @@ func (l *Lexer) peek() byte {
 }
 
 func (l *Lexer) removeSpace() (stopLexing bool) {
-	for ((l.lastChar == 32 || l.lastChar == '\t') && l.ignoreSpace) || ((l.lastChar == 10 || l.lastChar == 13) && l.ignoreNewLine) {
+	for ((l.lastChar == '\t' || l.lastChar == ' ') && l.ignoreSpace) || ((l.lastChar == 10 || l.lastChar == 13) && l.ignoreNewLine) {
 		if l.nextChar() != nil {
 			l.token = TokEOF
 			return true
@@ -185,7 +189,7 @@ func (l *Lexer) isAlphabetic() (stopLexing bool) {
 }
 
 func (l *Lexer) isDigit() (stopLexing bool) {
-	if unicode.IsNumber(l.lastChar) || l.lastChar == '.' {
+	if unicode.IsNumber(l.lastChar) || l.lastChar == '.' || l.lastChar == '-' {
 		tempStr := ""
 		l.isFloat = l.lastChar == '.'
 
@@ -220,6 +224,7 @@ func (l *Lexer) isDigit() (stopLexing bool) {
 func (l *Lexer) isComment() (stopLexing bool) {
 	if l.lastChar == '/' {
 		ch := l.peek()
+		l.isEOF = ch == 0
 		if ch == '/' {
 			for {
 				if l.nextChar() != nil {
@@ -324,7 +329,6 @@ func (l *Lexer) isStr() (stopLexing bool) {
 		}
 
 		l.isEOF = l.nextChar() != nil
-
 		l.token = TokStr
 		return true
 	}
@@ -372,68 +376,66 @@ func (l *Lexer) isArgSep() (stopLexing bool) {
 	return false
 }
 
-//func (l *Lexer) isAttribute() (stopLexing bool) {
-//	if l.lastChar == '#' {
-//		if l.nextChar() != nil {
-//			l.CurrentToken.kind = TokEOF
-//			l.CurrentToken.val = -1
-//			return true
-//		}
-//
-//		if l.LastChar == '[' {
-//			l.isEOF = l.nextChar() != nil
-//			l.CurrentToken.kind = TokAttribute
-//			l.CurrentToken.val = -1
-//			return true
-//		}
-//	}
-//
-//	return false
-//}
+func (l *Lexer) isAttribute() (stopLexing bool) {
+	if l.lastChar == '#' {
+		if l.nextChar() != nil {
+			l.token = TokEOF
+			return true
+		}
 
-//func (l *Lexer) isAtom() (stopLexing bool) {
-//	if l.LastChar == ':' {
-//		oldToken := l.CurrentToken
-//		oldChar := l.CurrentChar
-//
-//		l.ignoreSpace = false
-//		l.ignoreNewLine = false
-//
-//		if l.nextChar() != nil {
-//			l.CurrentToken.kind = TokEOF
-//			l.CurrentToken.val = -1
-//			l.ignoreSpace = true
-//			l.ignoreNewLine = true
-//			return true
-//		}
-//
-//		atom := ""
-//		for unicode.IsLetter(rune(l.LastChar)) || l.LastChar == '_' {
-//			atom += string(rune(l.LastChar))
-//
-//			if l.nextChar() != nil {
-//				break
-//			}
-//		}
-//
-//		l.ignoreSpace = true
-//		l.ignoreNewLine = true
-//
-//		if atom == "" {
-//			l.LastChar = ':'
-//			l.CurrentToken = oldToken
-//			l.CurrentChar = oldChar
-//			return false
-//		}
-//
-//		l.CurrentToken.kind = TokAtom
-//		l.CurrentToken.val = -1
-//		l.Identifier = ":" + atom
-//		return true
-//	}
-//
-//	return false
-//}
+		if l.lastChar == '[' {
+			l.isEOF = l.nextChar() != nil
+			l.token = TokAttribute
+			return true
+		}
+	}
+
+	return false
+}
+
+func (l *Lexer) isAtom() (stopLexing bool) {
+	if l.lastChar == ':' {
+		oldToken := l.token
+		oldOffset := l.offsetChar
+		oldFwOffset := l.forwardOffset
+
+		l.ignoreSpace = false
+		l.ignoreNewLine = false
+
+		if l.nextChar() != nil {
+			l.token = TokEOF
+			l.ignoreSpace = true
+			l.ignoreNewLine = true
+			return true
+		}
+
+		atom := ""
+		for unicode.IsLetter(l.lastChar) || l.lastChar == '_' {
+			atom += string(l.lastChar)
+
+			if l.nextChar() != nil {
+				break
+			}
+		}
+
+		l.ignoreSpace = true
+		l.ignoreNewLine = true
+
+		if atom == "" {
+			l.lastChar = ':'
+			l.token = oldToken
+			l.offsetChar = oldOffset
+			l.forwardOffset = oldFwOffset
+			return false
+		}
+
+		l.token = TokAtom
+		l.identifier = ":" + atom
+		return true
+	}
+
+	return false
+}
 
 func (l *Lexer) nextToken() {
 	if l.isEOF {
@@ -445,9 +447,9 @@ func (l *Lexer) nextToken() {
 		return
 	}
 
-	//if l.isAttribute() {
-	//	return
-	//}
+	if l.isAttribute() {
+		return
+	}
 
 	if l.isAlphabetic() {
 		return
@@ -469,11 +471,11 @@ func (l *Lexer) nextToken() {
 		return
 	}
 
-	//if !l.ignoreAtoms {
-	//	if l.isAtom() {
-	//		return
-	//	}
-	//}
+	if !l.ignoreAtoms {
+		if l.isAtom() {
+			return
+		}
+	}
 
 	if l.isComment() {
 		return
@@ -495,7 +497,14 @@ func (l *Lexer) nextToken() {
 		return
 	}
 
-	l.unknownVal = l.lastChar
-	l.token = TokUnknown
+
+	tempChar := l.lastChar
 	l.isEOF = l.nextChar() != nil
+
+	l.token = TokUnknown
+	l.unknownVal = tempChar
+
+	//l.unknownVal = l.lastChar
+	//l.token = TokUnknown
+	//l.isEOF = l.nextChar() != nil
 }

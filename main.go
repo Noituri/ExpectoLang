@@ -57,7 +57,7 @@ func handle(parser Parser, init bool) {
 	case TokExtern:
 		handleExtern(&parser, init)
 	case TokAttribute:
-		//parser.parseAttribute()
+		parser.parseAttribute()
 	default:
 		handleTopLevelExpression(&parser, init)
 	}
@@ -75,7 +75,7 @@ func main() {
 	parser.lexer.nextToken()
 	InitModuleAndPassManager()
 
-	handle(parser, true)
+	//handle(parser, true)
 	handle(parser, false)
 	if llvm.VerifyModule(module, llvm.PrintMessageAction) != nil {
 		panic("Failed to verify module")
