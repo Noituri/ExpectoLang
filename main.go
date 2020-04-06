@@ -49,7 +49,6 @@ func handleTopLevelExpression(parser *Parser, init bool) {
 }
 
 func handle(parser Parser, init bool) {
-	println(tokens[parser.lexer.token])
 	switch parser.lexer.token {
 	case TokEOF:
 		return
@@ -66,29 +65,27 @@ func handle(parser Parser, init bool) {
 	handle(parser, init)
 }
 
-//func initParser(data string) {
-//	parser := NewParser(data)
-//	for parser.lexer.token != TokEOF {
-//		if parser.lexer.token == TokAttribute {
-//			parser.parseAttribute()
-//		}
-//		if parser.lexer.
-//		parser.lexer.nextToken()
-//	}
-//}
+func initParser(data string) {
+	parser := NewParser(data)
+
+	parser.initialize = true
+	handle(parser, true)
+	parser.initialize = false
+
+	parser.lexer = NewLexer(data)
+	handle(parser, false)
+}
 
 func main() {
+	InitModuleAndPassManager()
+
 	data, err := ioutil.ReadFile("./test.nv")
 	if err != nil {
 		panic(err.Error())
 	}
 
-	parser := NewParser(string(data))
-	InitModuleAndPassManager()
+	initParser(string(data))
 
-	handle(parser, true)
-	parser.lexer = NewLexer(string(data))
-	handle(parser, false)
 	if llvm.VerifyModule(module, llvm.PrintMessageAction) != nil {
 		panic("Failed to verify module")
 	}

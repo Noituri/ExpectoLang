@@ -1,3 +1,4 @@
+
 #[primitive(type = :binary, precedence = 8)]
 fun &&(val_a: bool, val_b: bool): bool {
     if val_a == val_b {
@@ -6,17 +7,17 @@ fun &&(val_a: bool, val_b: bool): bool {
     return false
 }
 
+fun main(a: int, b: int): float {
+    if 1.0 == 0.1 && !(1.0 == 1.0 && 0.0 != 0.1) {
+        return 1.0
+    }
+    return 5. + 5. + 5.
+}
+
 #[primitive(type = :unary)]
 fun !(a: bool): bool {
     if a {
         return false
     }
     return true
-}
-
-fun main(a: int, b: int): float {
-    if 1.0 == 0.1 && !(1.0 == 1.0 && 0.0 != 0.1) {
-        return 1.0
-    }
-    return 5. + 5. + 5.
 }

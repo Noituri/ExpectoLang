@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -16,6 +15,7 @@ type Parser struct {
 	binOpPrecedence   map[string]int
 	knownVars         map[string]string
 	initialize		  bool
+	errors			  []string
 }
 
 func NewParser(data string) Parser {
@@ -37,6 +37,14 @@ func NewParser(data string) Parser {
 	}
 }
 
+func (p *Parser) addError(err string) {
+	if !p.initialize {
+		panic(err)
+	}
+	p.errors = append(p.errors, err)
+	p.lexer.nextToken()
+}
+
 func (p *Parser) checkType(t string) string {
 	switch t {
 	case LitVoid:
@@ -50,7 +58,8 @@ func (p *Parser) checkType(t string) string {
 	case LitInt:
 		return LitInt
 	default:
-		panic(fmt.Sprintf("type-%s-does-no-exit", t))
+		p.addError(fmt.Sprintf("Type %s doesn't exist.", t))
+		return ""
 	}
 }
 
@@ -61,7 +70,7 @@ func (p *Parser) checkAndNext(tok Token) Pos {
 		if p.lexer.token == TokUnknown {
 			got = string(p.lexer.unknownVal)
 		}
-		log.Panicf("Invalid token. Expected: %s, got: %s", tokens[tok], got)
+		p.addError(fmt.Sprintf("Invalid token. Expected: %s, got: %s", tokens[tok], got))
 	}
 	p.lexer.nextToken()
 	return pos
@@ -75,7 +84,7 @@ func (p *Parser) parseArgs() []ArgsPrototype {
 			p.lexer.nextToken()
 
 			if p.lexer.token != TokTypeSpec {
-				panic("After '"+name+"' argument there is no type specification.")
+				p.addError("After '"+name+"' argument there is no type specification.")
 			}
 
 			p.lexer.nextToken()
@@ -88,7 +97,7 @@ func (p *Parser) parseArgs() []ArgsPrototype {
 
 			_, exist := p.knownVars[name]
 			if exist {
-				panic("Variable with the same name already exist.")
+				p.addError("Variable with the same name already exist.")
 			}
 
 			p.knownVars[name] = varType
@@ -96,13 +105,13 @@ func (p *Parser) parseArgs() []ArgsPrototype {
 			if len(argsNames) == 0 {
 				break
 			} else {
-				panic("Expected another argument.")
+				p.addError("Expected another argument.")
 			}
 		}
 
 		if p.lexer.token != TokArgSep {
 			if p.lexer.token != TokRParen {
-				panic("Expected ')'")
+				p.addError("Expected ')'")
 			}
 
 			break
@@ -131,14 +140,14 @@ func (p *Parser) parsePrototype() PrototypeAST {
 	switch p.lexer.token {
 	case TokIdentifier:
 		if isOperator {
-			panic("Error: Operator is not a special character")
+			p.addError("Error: Operator is not a special character")
 		}
 
 		funcName = p.lexer.identifier
 		p.lexer.nextToken()
 	default:
 		if !isOperator {
-			panic("Only operators can use special character")
+			p.addError("Only operators can use special character")
 		}
 
 		p.lexer.ignoreNewLine = false
@@ -153,7 +162,7 @@ func (p *Parser) parsePrototype() PrototypeAST {
 			//}
 
 			if p.lexer.token == TokTypeSpec {
-				panic("':' can't be used as operator name.")
+				p.addError("':' can't be used as operator name.")
 			}
 
 			if p.lexer.token == TokAssign {
@@ -177,7 +186,7 @@ func (p *Parser) parsePrototype() PrototypeAST {
 			p.binOpPrecedence[funcName] = defPrecedence
 		} else {
 			if len(funcName) != 1 {
-				panic("Error: Unary operator can only have one character name")
+				p.addError("Error: Unary operator can only have one character name")
 			}
 		}
 
@@ -200,11 +209,11 @@ func (p *Parser) parsePrototype() PrototypeAST {
 	}
 
 	if isOperator && isBinOp && len(argsNames) != 2 {
-		panic("Wrong number of arguments in the binary operator (" + funcName + ")")
+		p.addError("Wrong number of arguments in the binary operator (" + funcName + ")")
 	}
 
 	if isOperator && !isBinOp && len(argsNames) != 1 {
-		panic("Wrong number of arguments in the unary operator (" + funcName + ")")
+		p.addError("Wrong number of arguments in the unary operator (" + funcName + ")")
 	}
 
 	if isBinOp {
@@ -216,7 +225,7 @@ func (p *Parser) parsePrototype() PrototypeAST {
 		p.lexer.nextToken()
 
 		if p.lexer.token != TokIdentifier {
-			panic("Expected a return type.")
+			p.addError("Expected a return type.")
 		}
 
 		returnType = p.checkType(p.lexer.identifier)
@@ -245,7 +254,7 @@ func (p *Parser) parseFunction() FunctionAST {
 	var body []AST
 	for p.lexer.token != TokRBrace {
 		if p.lexer.token == TokEOF {
-			panic("Function is not closed.")
+			p.addError("Function is not closed.")
 		}
 
 		stmt := p.parseStmt()
@@ -345,7 +354,6 @@ func (p *Parser) checkBinOpPrec() (prec, tokenOffset int, ok bool, operator stri
 		matched := false
 		for op := range p.binOpPrecedence {
 			if strings.HasPrefix(op, operator + tempOperator) {
-				println(operator, tempOperator,goBack)
 				goBack++
 				prevLexers = append(prevLexers, p.lexer.clone())
 				operator += tempOperator
@@ -427,7 +435,7 @@ func (p *Parser) parsePrimary() AST {
 		if p.lexer.token == TokUnknown {
 			what = string(p.lexer.unknownVal)
 		}
-		panic("Expression '"+what+"' has been used incorrectly.")
+		p.addError("Expression '"+what+"' has been used incorrectly.")
 		return nil
 	}
 }
@@ -445,7 +453,7 @@ func (p *Parser) parseStmt() AST {
 		if p.lexer.token == TokUnknown {
 			what = string(p.lexer.unknownVal)
 		}
-		panic("Statement '"+what+"' has been used incorrectly.")
+		p.addError("Statement '"+what+"' has been used incorrectly.")
 		return nil
 	}
 }
@@ -457,7 +465,7 @@ func (p *Parser) parseBool() AST {
 	if p.lexer.identifier == "true" {
 		val = 1
 	} else if p.lexer.identifier != "false" {
-		panic("Error occurred while parsing boolean")
+		p.addError("Error occurred while parsing boolean")
 	}
 
 	p.lexer.nextToken()
@@ -472,7 +480,7 @@ func (p *Parser) parseParen() AST {
 	}
 
 	if p.lexer.token != TokRParen {
-		panic("Parenthesis are not closed.")
+		p.addError("Parenthesis are not closed.")
 	}
 
 	p.lexer.nextToken()
@@ -488,7 +496,7 @@ func (p *Parser) parseIdentifier() AST {
 	if p.lexer.token != TokLParen {
 		varType, ok := p.knownVars[name]
 		if !ok {
-			panic(fmt.Sprintf(`Variable "%s" does not exist!`, name))
+			p.addError(fmt.Sprintf(`Variable "%s" does not exist!`, name))
 		}
 
 		return &VariableAST{
@@ -505,7 +513,7 @@ func (p *Parser) parseIdentifier() AST {
 
 	for p.lexer.token != TokRParen {
 		if p.lexer.token == TokEOF {
-			panic("Function call is not closed")
+			p.addError("Function call is not closed")
 		}
 
 		arg := p.parseExpression()
@@ -518,7 +526,7 @@ func (p *Parser) parseIdentifier() AST {
 		}
 
 		if p.lexer.token != TokArgSep {
-			panic("Expected ',' in '"+name+"' function call.")
+			p.addError("Expected ',' in '"+name+"' function call.")
 		}
 
 		p.lexer.nextToken()
@@ -554,14 +562,14 @@ func (p *Parser) parseIfElse() AST {
 
 	cond := p.parseExpression()
 	if cond == nil {
-		panic("Syntax Error: No condition inside if")
+		p.addError("Syntax Error: No condition inside if")
 	}
 	scopePos := p.checkAndNext(TokLBrace)
 
 	var trueBody []AST
 	for p.lexer.token != TokRBrace {
 		if p.lexer.token == TokEOF {
-			panic("No closing brace in 'if' statement")
+			p.addError("No closing brace in 'if' statement")
 		}
 
 		body := p.parseStmt()
@@ -577,7 +585,7 @@ func (p *Parser) parseIfElse() AST {
 	var elseIfBody []ElseIfAST
 	for {
 		if p.lexer.token == TokEOF {
-			panic("No closing brace in 'else if' statement")
+			p.addError("No closing brace in 'else if' statement")
 		}
 
 		if p.lexer.token != TokElse {
@@ -590,7 +598,7 @@ func (p *Parser) parseIfElse() AST {
 			elseScope = p.checkAndNext(TokLBrace)
 			for p.lexer.token != TokRBrace {
 				if p.lexer.token == TokEOF {
-					panic("No closing brace in 'else' statement")
+					p.addError("No closing brace in 'else' statement")
 				}
 
 				body := p.parseStmt()
@@ -607,7 +615,7 @@ func (p *Parser) parseIfElse() AST {
 
 		elseIfCond := p.parseExpression()
 		if elseIfCond == nil {
-			panic("No condition inside 'else if'")
+			p.addError("No condition inside 'else if'")
 		}
 
 		elseIfScope := p.checkAndNext(TokLBrace)
@@ -615,7 +623,7 @@ func (p *Parser) parseIfElse() AST {
 		var tempBody []AST
 		for p.lexer.token != TokRBrace {
 			if p.lexer.token == TokEOF {
-				panic("No closing brace in 'else if' statement")
+				p.addError("No closing brace in 'else if' statement")
 			}
 
 			body := p.parseStmt()
@@ -832,18 +840,18 @@ func (p *Parser) parsePrimitiveAttr() {
 	for prevToken != TokRParen {
 		if p.lexer.token == TokRParen {
 			if prevToken == TokArgSep {
-				panic("Wrong attribute definition. Excepted: ','")
+				p.addError("Wrong attribute definition. Excepted: ','")
 			}
 
 			break
 		}
 
 		if p.lexer.token == TokEOF {
-			panic("Primitive attribute is not closed")
+			p.addError("Primitive attribute is not closed")
 		}
 
 		if p.lexer.token != TokIdentifier {
-			panic("No identifier in the primitive attribute")
+			p.addError("No identifier in the primitive attribute")
 		}
 
 		switch p.lexer.identifier {
@@ -856,23 +864,23 @@ func (p *Parser) parsePrimitiveAttr() {
 			case ":binary":
 				p.isBinaryOp = true
 			default:
-				panic("Type '" + typ.(string) + "' in the primitive attribute does not exist")
+				p.addError("Type '" + typ.(string) + "' in the primitive attribute does not exist")
 			}
 		case "precedence":
 			p.lexer.nextToken()
 			precedence, ok := p.parseAssign("Invalid value assigning in the 'precedence' option of the primitive attribute").(float64)
 			if !ok {
-				panic("Could not assign value to precedence because value is not a number")
+				p.addError("Could not assign value to precedence because value is not a number")
 			}
 
 			p.defaultPrecedence = int(precedence)
 		default:
-			panic("There is no '" + p.lexer.identifier + "' option in the primitive attribute")
+			p.addError("There is no '" + p.lexer.identifier + "' option in the primitive attribute")
 		}
 
 		p.lexer.nextToken()
 		if p.lexer.token != TokArgSep && p.lexer.token != TokRParen {
-			panic("Wrong attribute definition. Expected ',' or ')'.")
+			p.addError("Wrong attribute definition. Expected ',' or ')'.")
 		}
 
 		prevToken = p.lexer.token
@@ -886,22 +894,22 @@ func (p *Parser) parseAttribute() {
 	p.lexer.nextToken()
 	for p.lexer.unknownVal != ']' {
 		if p.lexer.token == TokEOF {
-			panic("Attribute is not closed")
+			p.addError("Attribute is not closed")
 		}
 
 		if p.lexer.token != TokIdentifier {
-			panic("Syntax Error: No identifier in the attribute")
+			p.addError("Syntax Error: No identifier in the attribute")
 		}
 
 		switch p.lexer.identifier {
 		case "primitive":
 			p.parsePrimitiveAttr()
 		default:
-			panic("Attribute Error: '" + p.lexer.identifier + "' does not exist")
+			p.addError("Attribute Error: '" + p.lexer.identifier + "' does not exist")
 		}
 
 		if p.lexer.token != TokArgSep && p.lexer.unknownVal != ']' {
-			panic("Wrong attribute definition. Expected: ',' or ']'")
+			p.addError("Wrong attribute definition. Expected: ',' or ']'")
 		}
 	}
 
