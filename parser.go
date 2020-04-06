@@ -15,6 +15,7 @@ type Parser struct {
 	isBinaryOp        bool
 	binOpPrecedence   map[string]int
 	knownVars         map[string]string
+	initialize		  bool
 }
 
 func NewParser(data string) Parser {
@@ -239,16 +240,17 @@ func (p *Parser) parseFunction() FunctionAST {
 	pos := p.checkAndNext(TokFunction)
 	p.knownVars = make(map[string]string)
 	proto := p.parsePrototype()
-	blockPos := p.checkAndNext(TokLBrace)
 
+	blockPos := p.checkAndNext(TokLBrace)
 	var body []AST
 	for p.lexer.token != TokRBrace {
 		if p.lexer.token == TokEOF {
 			panic("Function is not closed.")
 		}
-		expr := p.parseExpression()
-		if expr != nil {
-			body = append(body, expr)
+
+		stmt := p.parseStmt()
+		if stmt != nil {
+			body = append(body, stmt)
 		}
 	}
 
@@ -259,6 +261,7 @@ func (p *Parser) parseFunction() FunctionAST {
 			nil,
 		})
 	}
+
 	p.lexer.nextToken()
 
 	block := BlockAST{
@@ -406,7 +409,8 @@ func (p *Parser) parseBinOpRHS(expressionPrec int, lhs AST) AST {
 		}
 	}
 }
-func (p *Parser) parseStmt() AST {
+
+func (p *Parser) parsePrimary() AST {
 	switch p.lexer.token {
 	case TokIdentifier:
 		return p.parseIdentifier()
@@ -416,12 +420,6 @@ func (p *Parser) parseStmt() AST {
 		return p.parseNumber()
 	case TokLParen:
 		return p.parseParen()
-	case TokIf:
-		return p.parseIfElse()
-	case TokReturn:
-		return p.parseReturn()
-	//case TokForLoop:
-	//	return p.parseLoop()
 	case TokTrue, TokFalse:
 		return p.parseBool()
 	default:
@@ -429,7 +427,25 @@ func (p *Parser) parseStmt() AST {
 		if p.lexer.token == TokUnknown {
 			what = string(p.lexer.unknownVal)
 		}
-		panic("'"+what+"' has been used incorrectly.")
+		panic("Expression '"+what+"' has been used incorrectly.")
+		return nil
+	}
+}
+
+func (p *Parser) parseStmt() AST {
+	switch p.lexer.token {
+	case TokIf:
+		return p.parseIfElse()
+	case TokReturn:
+		return p.parseReturn()
+	//case TokForLoop:
+	//	return p.parseLoop()
+	default:
+		what := tokens[p.lexer.token]
+		if p.lexer.token == TokUnknown {
+			what = string(p.lexer.unknownVal)
+		}
+		panic("Statement '"+what+"' has been used incorrectly.")
 		return nil
 	}
 }
@@ -548,7 +564,7 @@ func (p *Parser) parseIfElse() AST {
 			panic("No closing brace in 'if' statement")
 		}
 
-		body := p.parseExpression()
+		body := p.parseStmt()
 		if body != nil {
 			trueBody = append(trueBody, body)
 		}
@@ -577,7 +593,7 @@ func (p *Parser) parseIfElse() AST {
 					panic("No closing brace in 'else' statement")
 				}
 
-				body := p.parseExpression()
+				body := p.parseStmt()
 				if body != nil {
 					elseBody = append(elseBody, body)
 				}
@@ -602,7 +618,7 @@ func (p *Parser) parseIfElse() AST {
 				panic("No closing brace in 'else if' statement")
 			}
 
-			body := p.parseExpression()
+			body := p.parseStmt()
 			if body != nil {
 				tempBody = append(tempBody, body)
 			}
@@ -895,7 +911,7 @@ func (p *Parser) parseAttribute() {
 func (p *Parser) parseUnary() AST {
 	pos := p.lexer.pos
 	if p.lexer.token != TokUnknown || p.lexer.unknownVal == ' ' {
-		return p.parseStmt()
+		return p.parsePrimary()
 	}
 
 	unaryOp := p.lexer.unknownVal

@@ -113,7 +113,7 @@ func NewLexer(source string) Lexer {
 	if lexer.lastChar == 0xFEFF {
 		_ = lexer.nextChar()
 	}
-
+	lexer.nextToken()
 	return lexer
 }
 
