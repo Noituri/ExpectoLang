@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 )
 
 var BinOpLookup = make(map[string][]ArgsPrototype)
@@ -327,31 +328,43 @@ func (p *Parser) checkBinOpPrec() (prec, tokenOffset int, ok bool, operator stri
 	var prevLexers []Lexer
 	goBack := 0
 
-	for {
-		if p.lexer.token != TokAssign && p.lexer.token != TokEqual && p.lexer.token != TokUnknown {
-			prec, ok = p.binOpPrecedence[operator]
-			if !ok {
-				p.lexer = oldLexer
-			} else {
-				p.lexer = prevLexers[len(prevLexers) - goBack]
-			}
-
-			return prec, goBack, ok, operator
-		}
-
+	for p.lexer.token == TokAssign || p.lexer.token == TokEqual || p.lexer.token == TokUnknown {
+		tempOperator := ""
 		switch p.lexer.token {
 		case TokAssign:
-			operator += "="
+			tempOperator += "="
 		case TokEqual:
-			operator += "=="
+			tempOperator += "=="
 		default:
-			operator += string(p.lexer.unknownVal)
+			tempOperator += string(p.lexer.unknownVal)
 		}
 
-		prevLexers = append(prevLexers, p.lexer.clone())
-		p.lexer.nextToken()
-		goBack++
+		matched := false
+		for op := range p.binOpPrecedence {
+			if strings.HasPrefix(op, operator + tempOperator) {
+				println(operator, tempOperator,goBack)
+				goBack++
+				prevLexers = append(prevLexers, p.lexer.clone())
+				operator += tempOperator
+				p.lexer.nextToken()
+				matched = true
+				break
+			}
+		}
+
+		if !matched {
+			break
+		}
 	}
+
+	prec, ok = p.binOpPrecedence[operator]
+	if !ok {
+		p.lexer = oldLexer
+	} else {
+		p.lexer = prevLexers[len(prevLexers) - goBack]
+	}
+
+	return prec, goBack, ok, operator
 }
 
 func (p *Parser) parseBinOpRHS(expressionPrec int, lhs AST) AST {
