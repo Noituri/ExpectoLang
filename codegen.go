@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ExpectoLang/llvm/bindings/go/llvm"
 	"fmt"
+	"novum-lang/llvm/bindings/go/llvm"
 	"os"
 	"strings"
 )

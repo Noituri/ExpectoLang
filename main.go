@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ExpectoLang/llvm/bindings/go/llvm"
 	"io/ioutil"
+	"novum-lang/llvm/bindings/go/llvm"
 )
 
 func handleFunction(parser *Parser, init bool) {

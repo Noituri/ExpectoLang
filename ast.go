@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ExpectoLang/llvm/bindings/go/llvm"
+	"novum-lang/llvm/bindings/go/llvm"
 )
 
 const (
