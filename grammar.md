@@ -1,4 +1,5 @@
-# Expecto Lang - Grammar
+DEPRECATED GRAMMAR!
+# Novum - Grammar
 **Table of Contents**
 - [Code Style](#Style)
 - [Functions](#Functions)

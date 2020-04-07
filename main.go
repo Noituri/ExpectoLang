@@ -6,7 +6,7 @@ import (
 )
 
 func handleFunction(parser *Parser, init bool) {
-	functionAST := parser.parseFunction()
+	functionAST := parser.parseFunction(init)
 	if init {
 		protoIR := functionAST.Proto.codegen()
 		if protoIR.IsNil() {
@@ -21,17 +21,14 @@ func handleFunction(parser *Parser, init bool) {
 }
 
 func handleExtern(parser *Parser, init bool) {
-	//protoAST, err := parser.ParseExtern()
-	//if err != nil {
-	//	panic("Extern Parse Error: " + err.Error())
-	//}
-	//
-	//if init {
-	//	externIR := protoAST.codegen()
-	//	if externIR.IsNil() {
-	//		panic("Extern CodeGen Error: Could not create IR")
-	//	}
-	//}
+	protoAST := parser.parseExtern()
+
+	if init {
+		externIR := protoAST.codegen()
+		if externIR.IsNil() {
+			panic("Extern CodeGen Error: Could not create IR")
+		}
+	}
 }
 
 func handleTopLevelExpression(parser *Parser, init bool) {
@@ -59,6 +56,9 @@ func handle(parser Parser, init bool) {
 	case TokAttribute:
 		parser.parseAttribute()
 	default:
+		if init {
+			parser.lexer.nextToken()
+		}
 		handleTopLevelExpression(&parser, init)
 	}
 

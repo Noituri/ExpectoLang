@@ -64,6 +64,7 @@ var tokens = map[Token]string{
 	TokEqual:      "==",
 	TokAssign:     "=",
 	TokTypeSpec:   ":",
+	TokArgSep:     ",",
 }
 
 var keywords map[string]Token

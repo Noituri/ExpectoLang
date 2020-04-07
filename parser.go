@@ -42,7 +42,7 @@ func (p *Parser) addError(err string) {
 		panic(err)
 	}
 	p.errors = append(p.errors, err)
-	p.lexer.nextToken()
+	//p.lexer.nextToken()
 }
 
 func (p *Parser) checkType(t string) string {
@@ -147,7 +147,7 @@ func (p *Parser) parsePrototype() PrototypeAST {
 		p.lexer.nextToken()
 	default:
 		if !isOperator {
-			p.addError("Only operators can use special character")
+			p.addError("Found: '"+string(p.lexer.unknownVal)+"' but only operators can use special character")
 		}
 
 		p.lexer.ignoreNewLine = false
@@ -245,10 +245,19 @@ func (p *Parser) parsePrototype() PrototypeAST {
 	}
 }
 
-func (p *Parser) parseFunction() FunctionAST {
+func (p *Parser) parseFunction(init bool) FunctionAST {
 	pos := p.checkAndNext(TokFunction)
 	p.knownVars = make(map[string]string)
 	proto := p.parsePrototype()
+
+	if init {
+		return FunctionAST{
+			Pos:   pos,
+			kind:  astFunction,
+			Proto: proto,
+			Body:  BlockAST{},
+		}
+	}
 
 	blockPos := p.checkAndNext(TokLBrace)
 	var body []AST
@@ -286,12 +295,20 @@ func (p *Parser) parseFunction() FunctionAST {
 	}
 }
 
-//func (p *Parser) parseExtern() PrototypeAST {
-//	p.lexer.nextToken()
-//	p.knownVars = make(map[string]string)
-//	return p.parsePrototype()
-//}
-//
+func (p *Parser) parseExtern() PrototypeAST {
+	p.lexer.nextToken()
+	p.lexer.ignoreNewLine = false
+	p.lexer.ignoreSpace = false
+	_ = p.checkAndNext(TokFunction)
+	p.lexer.ignoreNewLine = true
+	p.lexer.ignoreSpace = true
+	if p.lexer.token == TokUnknown && p.lexer.unknownVal == ' ' {
+		p.lexer.nextToken()
+	}
+	p.knownVars = make(map[string]string)
+	return p.parsePrototype()
+}
+
 //func (p *Parser) parseTopLevelExpr() (FunctionAST, error) {
 //	pos := p.lexer.CurrentChar
 //
@@ -422,8 +439,8 @@ func (p *Parser) parsePrimary() AST {
 	switch p.lexer.token {
 	case TokIdentifier:
 		return p.parseIdentifier()
-	//case TokStr:
-	//	return p.parseStr()
+	case TokStr:
+		return p.parseStr()
 	case TokNumber:
 		return p.parseNumber()
 	case TokLParen:
@@ -435,13 +452,15 @@ func (p *Parser) parsePrimary() AST {
 		if p.lexer.token == TokUnknown {
 			what = string(p.lexer.unknownVal)
 		}
-		p.addError("Expression '"+what+"' has been used incorrectly.")
+		p.addError("'"+what+"' is not an expression.")
 		return nil
 	}
 }
 
 func (p *Parser) parseStmt() AST {
 	switch p.lexer.token {
+	case TokIdentifier:
+		return p.parseIdentifier()
 	case TokIf:
 		return p.parseIfElse()
 	case TokReturn:
@@ -453,7 +472,7 @@ func (p *Parser) parseStmt() AST {
 		if p.lexer.token == TokUnknown {
 			what = string(p.lexer.unknownVal)
 		}
-		p.addError("Statement '"+what+"' has been used incorrectly.")
+		p.addError("'"+what+"' is not a statement.")
 		return nil
 	}
 }
@@ -510,7 +529,6 @@ func (p *Parser) parseIdentifier() AST {
 	p.lexer.nextToken()
 
 	var args []AST
-
 	for p.lexer.token != TokRParen {
 		if p.lexer.token == TokEOF {
 			p.addError("Function call is not closed")
@@ -536,13 +554,13 @@ func (p *Parser) parseIdentifier() AST {
 	return &CallAST{pos, astCall, name, args}
 }
 
-//func (p *Parser) parseStr() AST {
-//	pos := p.lexer.CurrentChar
-//	val := p.lexer.strVal
-//
-//	p.lexer.nextToken()
-//	return &StringAST{Pos(pos), astString, val}
-//}
+func (p *Parser) parseStr() AST {
+	pos := p.lexer.pos
+	val := p.lexer.strVal
+
+	p.lexer.nextToken()
+	return &StringAST{pos, astString, val}
+}
 
 func (p *Parser) parseNumber() AST {
 	pos := p.lexer.pos
@@ -670,6 +688,7 @@ func (p *Parser) parseReturn() AST {
 	p.lexer.ignoreNewLine = true
 
 	if p.lexer.token == TokUnknown && (p.lexer.unknownVal == 10 || p.lexer.unknownVal == 13) {
+		p.lexer.nextToken()
 		return &ReturnAST{
 			pos,
 			astReturn,
