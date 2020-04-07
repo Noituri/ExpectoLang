@@ -464,8 +464,8 @@ func (p *Parser) parseStmt() AST {
 		return p.parseIfElse()
 	case TokReturn:
 		return p.parseReturn()
-	//case TokForLoop:
-	//	return p.parseLoop()
+	case TokForLoop:
+		return p.parseLoop()
 	default:
 		what := tokens[p.lexer.token]
 		if p.lexer.token == TokUnknown {
@@ -703,135 +703,134 @@ func (p *Parser) parseReturn() AST {
 	}
 }
 
-//func (p *Parser) parseLoopBody() []AST {
-//	body := []AST{}
-//	for ; p.lexer.CurrentToken.kind != TokEnd; {
-//		if p.lexer.CurrentToken.kind == TokEOF {
-//			panic("Syntax Error: Loop has no end")
-//		}
-//
-//		expr := p.ParseExpression()
-//
-//		if expr != nil {
-//			body = append(body, expr)
-//		}
-//	}
-//
-//	return body
-//}
-//
-//func (p *Parser) parseLoop() AST {
-//	pos := p.lexer.CurrentChar
-//	p.lexer.nextToken()
-//
-//	if p.lexer.CurrentToken.kind == TokBoolean {
-//		cond := p.ParseExpression()
-//		if cond == nil {
-//			panic("Syntax Error: No condition after 'in' keyword")
-//		}
-//
-//		body := p.parseLoopBody()
-//		p.lexer.nextToken()
-//
-//		return &LoopAST{
-//			Pos(pos),
-//			astLoop,
-//			false,
-//			cond,
-//			"",
-//			"",
-//			BlockAST{
-//				Pos(pos),
-//				astBlock,
-//				body,
-//			},
-//		}
-//	}
-//
-//	if p.lexer.CurrentToken.kind != TokIdentifier {
-//		panic("Syntax Error: No index variable in the loop")
-//	}
-//	ind := p.lexer.Identifier
-//
-//	p.lexer.nextToken()
-//	if p.lexer.CurrentToken.val != ',' {
-//		body := p.parseLoopBody()
-//		p.lexer.nextToken()
-//
-//		return &LoopAST{
-//			Pos(pos),
-//			astLoop,
-//			false,
-//			&VariableAST{
-//				Pos: Pos(pos),
-//				kind:     astVariable,
-//				Name:     ind,
-//				VarType:  LitBool,
-//			},
-//			"",
-//			"",
-//			BlockAST{
-//				Pos(pos),
-//				astBlock,
-//				body,
-//			},
-//		}
-//	}
-//
-//	p.lexer.nextToken()
-//	if p.lexer.CurrentToken.kind != TokIdentifier {
-//		panic("Syntax Error: No variable in the loop")
-//	}
-//	element := p.lexer.Identifier
-//
-//	p.lexer.nextToken()
-//	if p.lexer.CurrentToken.kind != TokIn {
-//		panic("Syntax Error: No `in` keyword in the loop")
-//	}
-//
-//	p.lexer.nextToken()
-//	cond := p.ParseExpression()
-//	if cond == nil {
-//		panic("Syntax Error: No condition after 'in' keyword")
-//	}
-//
-//	// Shadowing variables
-//	oldInd, okInd := p.knownVars[ind]
-//	oldElement, okElem := p.knownVars[element]
-//
-//	p.knownVars[ind] = LitInt
-//	p.knownVars[element] = ASTTypeToLit(cond.Kind())
-//
-//	body := p.parseLoopBody()
-//
-//	if okInd {
-//		p.knownVars[ind] = oldInd
-//	} else {
-//		delete(p.knownVars, p.knownVars[ind])
-//	}
-//
-//	if okElem {
-//		p.knownVars[ind] = oldElement
-//	} else {
-//		delete(p.knownVars, p.knownVars[ind])
-//	}
-//
-//	p.lexer.nextToken()
-//
-//	return &LoopAST{
-//		Pos(pos),
-//		astLoop,
-//		true,
-//		cond,
-//		ind,
-//		element,
-//		BlockAST{
-//			Pos(pos),
-//			astBlock,
-//			body,
-//		},
-//	}
-//}
+func (p *Parser) parseLoopBody() []AST {
+	var body []AST
+	for p.lexer.token != TokRBrace {
+		if p.lexer.token == TokEOF {
+			p.addError("For loop has no end")
+		}
+
+		expr := p.parseStmt()
+		if expr != nil {
+			body = append(body, expr)
+		}
+	}
+
+	return body
+}
+
+func (p *Parser) parseLoop() AST {
+	pos := p.lexer.pos
+	p.lexer.nextToken()
+
+	if p.lexer.token == TokTrue || p.lexer.token == TokFalse {
+		cond := p.parseExpression()
+		if cond == nil {
+			panic("No condition in the loop")
+		}
+
+		blockPos := p.checkAndNext(TokLBrace)
+		body := p.parseLoopBody()
+		p.lexer.nextToken()
+
+		return &LoopAST{
+			pos,
+			astLoop,
+			false,
+			cond,
+			"",
+			"",
+			BlockAST{
+				blockPos,
+				astBlock,
+				body,
+			},
+		}
+	}
+
+	ind := p.lexer.identifier
+	varPos := p.checkAndNext(TokIdentifier)
+
+	if p.lexer.token != TokArgSep {
+		blockPos := p.checkAndNext(TokLBrace)
+
+		body := p.parseLoopBody()
+		p.lexer.nextToken()
+
+		return &LoopAST{
+			pos,
+			astLoop,
+			false,
+			&VariableAST{
+				Pos: 	  varPos,
+				kind:     astVariable,
+				Name:     ind,
+				VarType:  LitBool,
+			},
+			"",
+			"",
+			BlockAST{
+				blockPos,
+				astBlock,
+				body,
+			},
+		}
+	}
+
+	p.lexer.nextToken()
+	if p.lexer.token != TokIdentifier {
+		panic("No variable in the loop")
+	}
+
+	element := p.lexer.identifier
+	p.lexer.nextToken()
+	if p.lexer.token != TokIn {
+		panic("No `in` keyword in the loop")
+	}
+
+	p.lexer.nextToken()
+	cond := p.parseExpression()
+	if cond == nil {
+		panic("No condition after 'in' keyword")
+	}
+
+	// Shadowing variables
+	oldInd, okInd := p.knownVars[ind]
+	oldElement, okElem := p.knownVars[element]
+
+	p.knownVars[ind] = LitInt
+	p.knownVars[element] = ASTTypeToLit(cond.Kind())
+
+	blockPos := p.checkAndNext(TokLBrace)
+	body := p.parseLoopBody()
+	if okInd {
+		p.knownVars[ind] = oldInd
+	} else {
+		delete(p.knownVars, p.knownVars[ind])
+	}
+
+	if okElem {
+		p.knownVars[ind] = oldElement
+	} else {
+		delete(p.knownVars, p.knownVars[ind])
+	}
+
+	p.lexer.nextToken()
+
+	return &LoopAST{
+		pos,
+		astLoop,
+		true,
+		cond,
+		ind,
+		element,
+		BlockAST{
+			blockPos,
+			astBlock,
+			body,
+		},
+	}
+}
 
 func (p *Parser) parseAssign(panicMessage string) interface{} {
 	if p.lexer.token != TokAssign {

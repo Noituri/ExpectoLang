@@ -1,6 +1,19 @@
+fun test_loop(should_loop: bool) {
+    for should_loop {
+        writeln("looping...")
+    }
+}
+
 fun main {
     writeln("Hello world!")
     writeln("Hello world 2!")
+
+    for i, v in "hello" {
+        writeln(v)
+    }
+
+    test_loop(false)
+
     if 1.0 == 0.1 && !(1.0 == 1.0 && 0.0 != 0.1) {
         return
     }

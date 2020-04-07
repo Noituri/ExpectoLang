@@ -20,6 +20,7 @@
 //}
 
 int main() {
+    char *foo = "foo";
     printf("%.6f\n", 2.2);
 //    char* test = "HELLO";
 //    for (int i = 0; i < 5; i++) {
