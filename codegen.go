@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"novum-lang/llvm/bindings/go/llvm"
 	"os"
-	"strings"
 )
 
 var (
@@ -25,7 +24,7 @@ func InitModuleAndPassManager() {
 }
 
 func (s *StringAST) codegen() llvm.Value {
-	return builder.CreateGlobalStringPtr(strings.ReplaceAll(s.Value, `\n`, "\n"), "strtmp")
+	return builder.CreateGlobalStringPtr(s.Value, "strtmp")
 }
 
 func (n *NumberLiteralAST) codegen() llvm.Value {

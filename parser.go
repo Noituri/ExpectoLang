@@ -42,7 +42,6 @@ func (p *Parser) addError(err string) {
 		panic(err)
 	}
 	p.errors = append(p.errors, err)
-	//p.lexer.nextToken()
 }
 
 func (p *Parser) checkType(t string) string {

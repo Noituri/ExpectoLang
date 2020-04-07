@@ -4,6 +4,7 @@ package main
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -326,8 +327,17 @@ func (l *Lexer) isStr() (stopLexing bool) {
 				l.isEOF = true
 				break
 			}
-
 		}
+
+		l.strVal = strings.ReplaceAll(l.strVal, "\\r", "\r")
+		l.strVal = strings.ReplaceAll(l.strVal, "\\n", "\n")
+		l.strVal = strings.ReplaceAll(l.strVal, "\\b", "\b")
+		l.strVal = strings.ReplaceAll(l.strVal, "\\a", "\a")
+		l.strVal = strings.ReplaceAll(l.strVal, "\\f", "\f")
+		l.strVal = strings.ReplaceAll(l.strVal, "\\t", "\t")
+		l.strVal = strings.ReplaceAll(l.strVal, "\\v", "\v")
+		l.strVal = strings.ReplaceAll(l.strVal, "\\\\", "\\")
+		l.strVal = strings.ReplaceAll(l.strVal, "\\\"", "\"")
 
 		l.isEOF = l.nextChar() != nil
 		l.token = TokStr
@@ -498,14 +508,7 @@ func (l *Lexer) nextToken() {
 		return
 	}
 
-
-	tempChar := l.lastChar
-	l.isEOF = l.nextChar() != nil
-
+	l.unknownVal = l.lastChar
 	l.token = TokUnknown
-	l.unknownVal = tempChar
-
-	//l.unknownVal = l.lastChar
-	//l.token = TokUnknown
-	//l.isEOF = l.nextChar() != nil
+	l.isEOF = l.nextChar() != nil
 }
